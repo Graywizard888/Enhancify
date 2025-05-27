@@ -66,8 +66,8 @@ importApp() {
         return 1
     fi
     if ! "${DIALOG[@]}" \
-        --title '| Proceed |' \
-        --yes-label 'Import' \
+        --title '| App Details |' \
+        --yes-label 'Import App' \
         --no-label 'Back' \
         --yesno "The following data is extracted from the apk file you provided.\nApp Name    : $APP_NAME\nPackage Name: $PKG_NAME\nVersion     : $SELECTED_VERSION\nDo you want to proceed with this app?" -1 -1; then
         return 1
