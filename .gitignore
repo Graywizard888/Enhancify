@@ -1,0 +1,8 @@
+*.*
+*/**
+
+!main.sh
+!install.sh
+!sources.json
+!modules/**
+!root/**
