@@ -36,7 +36,7 @@ editOptions() {
                     --title '| Select Option Key |' \
                     --no-tags \
                     --ok-label 'Edit' \
-                    --cancel-label 'Done' \
+                    --cancel-label 'Start Patching' \
                     --help-button \
                     --help-label 'Back' \
                     --menu "$NAVIGATION_HINT" -1 -1 0 \
