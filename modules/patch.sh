@@ -73,7 +73,7 @@ patchApp() {
         "apps/$APP_NAME/$APP_VER.apk" |&
         tee -a "$STORAGE/patch_log.txt" |
         "${DIALOG[@]}" \
-            --ok-label 'Continue' \
+            --ok-label 'Install & Save' \
             --extra-button \
             --extra-label 'Share Logs' \
             --cursor-off-label \
