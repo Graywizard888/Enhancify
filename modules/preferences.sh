@@ -6,7 +6,7 @@ configure() {
 
     readarray -t UPDATED_CONFIG < <(
         "${DIALOG[@]}" \
-            --title '| Configure |' \
+            --title '| Settings |' \
             --no-items \
             --separate-output \
             --no-cancel \
