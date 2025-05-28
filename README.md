@@ -19,5 +19,9 @@ ____________________________________
 
 Installation :-
 
-1) 
+1) termux-setup-storage
+2) git clone https://github.com/Graywizard888/Revancify_Enhance.git
+3) cd Revancify_Enhance
+4) bash install.sh fist time will run automatically
+5) run with revancify_Enhance
 
