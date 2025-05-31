@@ -24,4 +24,9 @@ Installation :-
 3) cd Revancify_Enhance
 4) bash install.sh first time will run automatically
 5) run with revancify_Enhance later
+____________________________________
+
+Links :-
+Telegram discusssion group :-https://t.me/+3rqFPZeFW5phODA1
+
 
