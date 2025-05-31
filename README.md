@@ -27,6 +27,9 @@ Installation :-
 ____________________________________
 
 Links :-
-Telegram discusssion group :-https://t.me/+3rqFPZeFW5phODA1
+
+Telegram discusssion group :-
+
+https://t.me/+3rqFPZeFW5phODA1
 
 
