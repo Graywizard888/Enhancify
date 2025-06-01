@@ -1,13 +1,13 @@
 #!/usr/bin/bash
 
-SRC="$HOME/Revancify_Enhance"
+SRC="$HOME/Enhancify"
 
-HELP="revancify_Enhance
+HELP="enhancify
 
-Usage: revancify_Enhance [OPTION]
+Usage: enhancify [OPTION]
 
 Options:
--f:  Force re-install Revancify_Enhance
+-f:  Force re-install Enhancify
 -u:  Disable Update Check
 -r:  Disable Root access
 -v:  Print current version
@@ -29,7 +29,7 @@ while getopts ":furvh" OPT 2> /dev/null; do
                 source "$SRC/.info"
                 echo "$VERSION"
             else
-                echo "Revancify_Enhance not installed !!"
+                echo "Enhancify not installed !!"
             fi
             exit
             ;;
@@ -124,29 +124,29 @@ fetchSrc() {
 
     echo "Checking Latest Release..."
 
-    TAG=$(curl -s 'https://api.github.com/repos/Graywizard888/Revancify_Enhance/releases/latest' 2> /dev/null | jq -r '.tag_name')
+    TAG=$(curl -s 'https://api.github.com/repos/Graywizard888/Enhancify/releases/latest' 2> /dev/null | jq -r '.tag_name')
 
     [ "$TAG" == "$VERSION" ] && return
 
-    echo "Revancify_Enhance $TAG is available..."
+    echo "Enhancify $TAG is available..."
 
     echo "Installing..."
 
-    wget -qc "https://github.com/Graywizard888/Revancify_Enhance/archive/refs/tags/$TAG.zip" -O "$TAG.zip"
+    wget -qc "https://github.com/Graywizard888/Enhancify/archive/refs/tags/$TAG.zip" -O "$TAG.zip"
     if [ -e "$TAG.zip" ]; then
         unzip -qo "$TAG.zip"
         rm -rf "$TAG.zip"
-        for CONTENT in Revancify_Enhance-*/* Revancify_Enhance-*/.*; do
+        for CONTENT in Enhancify-*/* Enhancify-*/.*; do
             rm -rf "${SRC:?}/$(basename "$CONTENT")"
             mv "$CONTENT" "$SRC/"
         done
-        rm -rf Revancify_Enhance-* &> /dev/null
-        cp -f "$SRC/revancify_Enhance" "$PREFIX/bin/revancify_Enhance"
-        chmod +x "$PREFIX/bin/revancify_Enhance"
-        echo -e "Revancify_Enhance $TAG is now installed.\nRun 'revancify_Enhance -h' for help."
+        rm -rf Enhancify-* &> /dev/null
+        cp -f "$SRC/enhancify" "$PREFIX/bin/enhancify"
+        chmod +x "$PREFIX/bin/enhancify"
+        echo -e "Enhancify $TAG is now installed.\nRun 'enhancify -h' for help."
         exit
     else
-        echo -e "Unable to install Revancify_Enhance $TAG !!\nPlease try again with proper Internet"
+        echo -e "Unable to install Enhancify $TAG !!\nPlease try again with proper Internet"
         exit 1
     fi
 }
