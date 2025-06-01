@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 
-STORAGE="$HOME/storage/shared/Revancify_Enhance"
+STORAGE="$HOME/storage/shared/Enhancify"
 
 ARCH=$(getprop ro.product.cpu.abi)
 DPI=$(getprop ro.sf.lcd_density)
@@ -11,7 +11,7 @@ ROOT_STATUS=$(if [ "$(id -u)" -eq 0 ]; then echo 'Root Mode'; else echo 'Non-Roo
 
 ONLINE_STATUS=$(if ping -c 1 google.com &> /dev/null; then echo 'Online'; else echo 'Offline'; fi)
 
-DIALOG=(dialog --backtitle "Revancify Enhance | $ROOT_STATUS | $ONLINE_STATUS | Arch: $ARCH" --no-shadow --begin 2 0)
+DIALOG=(dialog --backtitle "Enhancify | $ROOT_STATUS | $ONLINE_STATUS | Arch: $ARCH" --no-shadow --begin 2 0)
 
 CURL=(curl -sL --fail-early --connect-timeout 2 --max-time 5 -H 'Cache-Control: no-cache')
 
@@ -36,11 +36,11 @@ else
 fi
 if [ "$status" == "Online" ]; then
     git pull >/dev/null 2>&1 || (git fetch --all >/dev/null 2>&1 && git reset --hard "@{u}" >/dev/null 2>&1)
-    dialog --no-shadow --infobox "\n  █▀█ █▀▀ █░█ ▄▀█ █▄░█ █▀▀ █ █▀▀ █▄█\n  █▀▄ ██▄ ▀▄▀ █▀█ █░▀█ █▄▄ █ █▀░ ░█░  \n\nModifier     : Graywizard888\nLast Updated : $(git log -1 --pretty='format:%cd' --date=format:'%b %d, %Y | %H:%M')\nStatus       : $status\nBuild Version: Enhanced V2.7.0\nRelease      : v1.0.0" 11 42
+    dialog --no-shadow --infobox "\n  █▀█ █▀▀ █░█ ▄▀█ █▄░█ █▀▀ █ █▀▀ █▄█\n  █▀▄ ██▄ ▀▄▀ █▀█ █░▀█ █▄▄ █ █▀░ ░█░  \n\nModifier     : Graywizard888\nLast Updated : $(git log -1 --pretty='format:%cd' --date=format:'%b %d, %Y | %H:%M')\nStatus       : $status\nBuild Version: Enhanced V2.7.0\nRelease      : v2.0.0 Rc1" 11 42
 sleep 5
 
 else
-    dialog --no-shadow --infobox "\n  █▀█ █▀▀ █░█ ▄▀█ █▄░█ █▀▀ █ █▀▀ █▄█\n  █▀▄ ██▄ ▀▄▀ █▀█ █░▀█ █▄▄ █ █▀░ ░█░  \n\nModifier    : Graywizard888\nLast Updated : $(git log -1 --pretty='format:%cd' --date=format:'%b %d, %Y | %H:%M')\nStatus       : $status\nBuild Version: Enhanced V2.7.0\nRelease      : v1.0.0" 11 42
+    dialog --no-shadow --infobox "\n  █▀█ █▀▀ █░█ ▄▀█ █▄░█ █▀▀ █ █▀▀ █▄█\n  █▀▄ ██▄ ▀▄▀ █▀█ █░▀█ █▄▄ █ █▀░ ░█░  \n\nModifier    : Graywizard888\nLast Updated : $(git log -1 --pretty='format:%cd' --date=format:'%b %d, %Y | %H:%M')\nStatus       : $status\nBuild Version: Enhanced V2.7.0\nRelease      : v2.0.0 Rc1" 11 42
 sleep 5
 fi
 tput civis
