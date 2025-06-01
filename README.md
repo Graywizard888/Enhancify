@@ -14,7 +14,9 @@ Features :-
 4) Implemented Aunali RevancedExeriments source
 5) The Internal Storage/Revancify path changed to Internal Storage/Enhancify
 
-6) And many more in Future
+6) added custom sources feature
+
+7) And many more in Future
 ____________________________________
 
 Installation :-
