@@ -1,4 +1,4 @@
-# Revancify_Enhance
+# Enhancify
 The only custom Revancify with extra features and more customizations
 
 note :- this project is fork of https://github.com/decipher3114/Revancify
