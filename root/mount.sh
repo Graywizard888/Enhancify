@@ -6,21 +6,21 @@ APP_VER="$3"
 SOURCE="$4"
 
 log() {
-    echo "- $1" >> "/storage/emulated/0/Revancify_Enhance/mount_log.txt"
+    echo "- $1" >> "/storage/emulated/0/Enhancify/mount_log.txt"
 }
 
-rm "/storage/emulated/0/Revancify_Enhance/mount_log.txt"
+rm "/storage/emulated/0/Enhancify/mount_log.txt"
 
 log "START"
 
-for DIR in /data/local/tmp/revancify_Enhance/ /data/adb/post-fs-data.d/ /data/adb/service.d/; do
+for DIR in /data/local/tmp/enhancify/ /data/adb/post-fs-data.d/ /data/adb/service.d/; do
     if [ ! -e $DIR ]; then
         mkdir "$DIR"
         log "$DIR created."
     fi
 done
 
-for FILE in "/data/adb/post-fs-data.d/umount_$PKG_NAME.sh" "/data/adb/service.d/mount_$PKG_NAME.sh" "/data/local/tmp/revancify_Enhance/$PKG_NAME.apk"; do
+for FILE in "/data/adb/post-fs-data.d/umount_$PKG_NAME.sh" "/data/adb/service.d/mount_$PKG_NAME.sh" "/data/local/tmp/enhancify/$PKG_NAME.apk"; do
     if [ -e "$FILE" ]; then
         rm "$FILE"
         log "$FILE deleted."
@@ -49,7 +49,7 @@ if ! pm list packages | grep -q "$PKG_NAME"; then
 fi
 
 STOCK_APP_PATH=$(pm path "$PKG_NAME" | sed -n "/base/s/package://p")
-PATCHED_APP_PATH="/data/local/tmp/revancify_Enhance/$PKG_NAME.apk"
+PATCHED_APP_PATH="/data/local/tmp/enhancify/$PKG_NAME.apk"
 
 log "Force stopping..."
 am force-stop "$PKG_NAME"
