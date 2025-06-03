@@ -16,7 +16,9 @@ Features :-
 
 6) added custom sources feature
 
-7) And many more in Future
+7) File manager like ui for file selection
+
+8) And many more in Future
 ____________________________________
 
 Installation :-
