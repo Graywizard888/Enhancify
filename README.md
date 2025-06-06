@@ -36,6 +36,6 @@ Links :-
 
 Telegram discusssion group :-
 
-https://t.me/+3rqFPZeFW5phODA1
+https://t.me/Graywizard_projects
 
 
