@@ -36,11 +36,11 @@ else
 fi
 if [ "$status" == "Online" ]; then
     git pull >/dev/null 2>&1 || (git fetch --all >/dev/null 2>&1 && git reset --hard "@{u}" >/dev/null 2>&1)
-    dialog --no-shadow --infobox "\n  █▀█ █▀▀ █░█ ▄▀█ █▄░█ █▀▀ █ █▀▀ █▄█\n  █▀▄ ██▄ ▀▄▀ █▀█ █░▀█ █▄▄ █ █▀░ ░█░  \n\nModifier     : Graywizard888\nLast Updated : $(git log -1 --pretty='format:%cd' --date=format:'%b %d, %Y | %H:%M')\nStatus       : $status\nBuild Version: Enhanced V2.7.0\nRelease      : v2.1.0 Rc1" 11 42
-sleep 5
+    dialog --no-shadow --infobox "\n  █▀█ █▀▀ █░█ ▄▀█ █▄░█ █▀▀ █ █▀▀ █▄█\n  █▀▄ ██▄ ▀▄▀ █▀█ █░▀█ █▄▄ █ █▀░ ░█░  \n\nModifier     : Graywizard888\nLast Updated : $(git log -1 --pretty='format:%cd' --date=format:'%b %d, %Y | %H:%M')\nStatus       : $status\nBuild Version: Enhanced V2.7.0\nRelease      : v2.2.0 Rc1" 11 42
+sleep 4
 
 else
-    dialog --no-shadow --infobox "\n  █▀█ █▀▀ █░█ ▄▀█ █▄░█ █▀▀ █ █▀▀ █▄█\n  █▀▄ ██▄ ▀▄▀ █▀█ █░▀█ █▄▄ █ █▀░ ░█░  \n\nModifier    : Graywizard888\nLast Updated : $(git log -1 --pretty='format:%cd' --date=format:'%b %d, %Y | %H:%M')\nStatus       : $status\nBuild Version: Enhanced V2.7.0\nRelease      : v2.1.0 Rc1" 11 42
-sleep 5
+    dialog --no-shadow --infobox "\n  █▀█ █▀▀ █░█ ▄▀█ █▄░█ █▀▀ █ █▀▀ █▄█\n  █▀▄ ██▄ ▀▄▀ █▀█ █░▀█ █▄▄ █ █▀░ ░█░  \n\nModifier    : Graywizard888\nLast Updated : $(git log -1 --pretty='format:%cd' --date=format:'%b %d, %Y | %H:%M')\nStatus       : $status\nBuild Version: Enhanced V2.7.0\nRelease      : v2.2.0 Rc1" 11 42
+sleep 4
 fi
 tput civis
