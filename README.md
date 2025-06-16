@@ -18,7 +18,9 @@ Features :-
 
 7) File manager like ui for file selection
 
-8) And many more in Future
+8) Import app if apkmirror app fetching failed with user prompted
+
+9) And many more in Future
 ____________________________________
 
 Installation :-
