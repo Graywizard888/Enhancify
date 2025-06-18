@@ -22,7 +22,7 @@ mountApp() {
 
 umountApp() {
     local PKG_NAME
-    readarray -t MOUNTED_PKGS < <(su -c 'ls /data/local/tmp/revancify_Enhance | xargs basename -s ".apk" -a 2> /dev/null')
+    readarray -t MOUNTED_PKGS < <(su -c 'ls /data/local/tmp/enhancify | xargs basename -s ".apk" -a 2> /dev/null')
     if [ ${#MOUNTED_PKGS[@]} == 0 ]; then
         notify msg "No mounted app present!!"
         return
