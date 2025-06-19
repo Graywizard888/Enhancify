@@ -22,7 +22,7 @@ setEnv() {
 }
 
 notify() {
-    dialog --backtitle 'Revancify' --"$1"box "$2" 12 45
+    dialog --backtitle 'Enhancify' --"$1"box "$2" 12 45
 }
 
 internet() {
