@@ -14,7 +14,7 @@ Features :-
 4) Implemented Aunali RevancedExeriments source
 5) The Internal Storage/Revancify path changed to Internal Storage/Enhancify
 
-6) added custom sources feature
+6) added custom sources feature with "edit" custom sources and "delete" custom sources options
 
 7) File manager like ui for file selection
 
