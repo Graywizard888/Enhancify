@@ -13,14 +13,15 @@ Features :-
 3) Pre-Release Support ( CLI,Patches, Patch options )
 4) Implemented Aunali RevancedExeriments source
 5) The Internal Storage/Revancify path changed to Internal Storage/Enhancify
-
 6) added custom sources feature with "edit" custom sources and "delete" custom sources options
 
+(note:-preloaded sources cannot be edited nor deletable)
+
 7) File manager like ui for file selection
+  
+9) Import app if apkmirror app fetching failed with user prompted
 
-8) Import app if apkmirror app fetching failed with user prompted
-
-9) And many more in Future
+11) And many more in Future
 ____________________________________
 
 Installation :-
