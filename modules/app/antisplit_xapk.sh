@@ -3,7 +3,7 @@ antisplit_xapk() {
     local DPI_SPLIT LANG_OPTIONS=() LANG_SELECTED LANG_SPLITS MERGE_DIR
     local lang_names=() lang_name code msg
 
-    notify info "Please Wait !!\nProcessing XAPK ..."
+    notify info "Please Wait !!\nProcessing Xapk File..."
 
     APP_DIR="apps/$APP_NAME/$APP_VER"
     TEMP_DIR="$APP_DIR/temp"
