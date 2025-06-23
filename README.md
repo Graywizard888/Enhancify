@@ -21,6 +21,8 @@ Features :-
   
 9) Import app if apkmirror app fetching failed with user prompted
 
+10) Supporting Apk,Apkm,Xapk Files
+
 11) And many more in Future
 ____________________________________
 
