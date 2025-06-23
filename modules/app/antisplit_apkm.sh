@@ -3,7 +3,7 @@
 antisplit_apkm() {
     local APP_DIR LOCALE
 
-    notify info "Please Wait !!\nProcessing app ..."
+    notify info "Please Wait !!\nProcessing Apkm File ..."
 
     APP_DIR="apps/$APP_NAME/$APP_VER"
 
