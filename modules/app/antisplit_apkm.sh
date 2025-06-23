@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 
-antisplitApp() {
+antisplit_apkm() {
     local APP_DIR LOCALE
 
     notify info "Please Wait !!\nProcessing app ..."
