@@ -169,7 +169,7 @@ downloadApp() {
             return 0
         fi
     elif [ -e "apps/$APP_NAME/$APP_VER" ]; then
-        antisplitApp && return 0 || return 1
+        antisplit_apkm && return 0 || return 1
     elif ! ls "apps/$APP_NAME/$APP_VER"* &> /dev/null; then
         rm -rf "apps/$APP_NAME" &> /dev/null
     fi
@@ -178,6 +178,6 @@ downloadApp() {
     downloadAppFile || return 1
 
     if [ "$APP_FORMAT" == "BUNDLE" ]; then
-        antisplitApp || return 1
+        antisplit_apkm || return 1
     fi
 }
