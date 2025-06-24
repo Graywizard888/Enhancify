@@ -126,7 +126,7 @@ sleep 1
 
     # Merge with retries
     for attempt in {1..2}; do
-        notify info "Merging APK... [$((60 + attempt*15))%]"
+        notify info "Building APK... [$((60 + attempt*15))%]"
         if java -jar bin/APKEditor.jar m -i "$MERGE_DIR" -o "apps/$APP_NAME/$APP_VER.apk" &>/dev/null; then
             break
         elif [[ $attempt -eq 2 ]]; then
