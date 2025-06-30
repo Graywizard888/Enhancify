@@ -23,7 +23,9 @@ Features :-
 
 10) Supporting Apk,Apkm,Xapk Files (Xapk with custom language selection support)
 
-11) And many more in Future
+11) Supports Network Acceleration for faster downloading (only fetch assets)
+
+12) And many more in Future
 ____________________________________
 
 Installation :-
