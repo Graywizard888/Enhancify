@@ -33,7 +33,7 @@ downloadFile() {
             local progress
             progress=$(cat "$progress_file" 2>/dev/null || echo 0)
             echo "$progress"
-            sleep 0.1
+            sleep 1
         done | "${DIALOG[@]}" --gauge "$gauge_text\nStatus: Parts:4 | mirrors connected 4" -1 -1 0
         
         wait $download_pid
