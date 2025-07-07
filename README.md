@@ -43,6 +43,6 @@ Links :-
 
 Telegram discusssion group :-
 
-https://t.me/Graywizard_projects
+[Telegram Group](https://t.me/Graywizard_projects)
 
 
