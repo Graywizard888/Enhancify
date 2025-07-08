@@ -41,8 +41,6 @@ ____________________________________
 
 Links :-
 
-Telegram discusssion group :-
-
 [![TelegramChannel](https://img.shields.io/badge/Telegram_Discussion_chat-2CA5E0?style=for-the-badge&logo=Telegram&logoColor=FFFFFF)](https://t.me/Graywizard_projects)
 
 
