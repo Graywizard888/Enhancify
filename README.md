@@ -1,7 +1,7 @@
 # Enhancify
 The only custom Revancify with extra features and more customizations
 
-note :- this project is fork of [Revancify](https://github.com/decipher3114/Revancify)
+> _**Note :- This project is fork Of**_ [Revancify](https://github.com/decipher3114/Revancify)
 
 don't report issues on original Revancify repo
 
