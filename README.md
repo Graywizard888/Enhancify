@@ -1,47 +1,67 @@
-# Enhancify
-The only custom Revancify with extra features and more customizations
+# Enhancify 
 
-> _**Note :- This project is fork Of**_ [Revancify](https://github.com/decipher3114/Revancify)
+> **The Ultimate Custom Revancify Experience**  
+> Enhanced patching with next-level features and personalization options
 
-don't report issues on original Revancify repo
+[![Telegram Channel](https://img.shields.io/badge/Telegram_Discussion-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/Graywizard_projects)
+![GitHub Repo stars](https://img.shields.io/github/stars/Graywizard888/Enhancify?style=for-the-badge&color=yellow)
+![Termux](https://img.shields.io/badge/Termux-000000?style=for-the-badge&logo=termux&logoColor=green)
 
-____________________________________
-Features :- 
-1) Implimented back some Revancify v1 UI. with some tweaks 
+---
 
-2) New Theme Cybernatic Green by Graywizard888
-3) Pre-Release Support ( CLI,Patches, Patch options )
-4) Implemented Aunali RevancedExeriments source
-5) The Internal Storage/Revancify path changed to Internal Storage/Enhancify
-6) added custom sources feature with "edit" custom sources and "delete" custom sources options
+## 🔥 Features That Make The Difference
 
-(note:-preloaded sources cannot be edited nor deletable)
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin: 20px 0;">
 
-7) File manager like ui for file selection
-  
-9) Import app if apkmirror app fetching failed with user prompted
+<div style="background: #1e2b3c; padding: 15px; border-radius: 10px;">
+<h3>🎨 UI Enhancements</h3>
+<ul>
+<li>Classic Revancify v1 UI with modern tweaks</li>
+<li>Cybernetic Green theme by Graywizard888</li>
+<li>File manager-like selection interface</li>
+</ul>
+</div>
 
-10) Supporting Apk,Apkm,Xapk Files (Xapk with custom language selection support)
+<div style="background: #1e2b3c; padding: 15px; border-radius: 10px;">
+<h3>⚡ Performance Boosters</h3>
+<ul>
+<li>Network acceleration for faster downloads</li>
+<li>Pre-release support (CLI, Patches, Options)</li>
+</ul>
+</div>
 
-11) Supports Network Acceleration for faster downloading (only fetch assets)
+<div style="background: #1e2b3c; padding: 15px; border-radius: 10px;">
+<h3>🔧 Advanced Customization</h3>
+<ul>
+<li>Custom sources management (add/edit/delete)</li>
+<li>Preloaded protected sources</li>
+<li>New storage path: Internal Storage/Enhancify</li>
+</ul>
+</div>
 
-12) And many more in Future
-____________________________________
+<div style="background: #1e2b3c; padding: 15px; border-radius: 10px;">
+<h3>📦 Flexible App Support</h3>
+<ul>
+<li>Import apps when APKMirror fails</li>
+<li>Supports APK, APKM, XAPK formats</li>
+<li>XAPK language selection support</li>
+</ul>
+</div>
 
-Installation :-
+</div>
 
-termux-setup-storage
+---
 
-copy code:
+## 🚀 Installation Guide
 
-git clone https://github.com/Graywizard888/Enhancify.git && cd Enhancify && bash install.sh 
+1. **Prepare Termux:**
+   ```bash
+   termux-setup-storage && git clone https://github.com/Graywizard888/Enhancify.git && cd Enhancify && bash install.sh
 
-run with enhancify later
-____________________________________
+Run later with
+```bash
+  enhancify
 
-Links :-
+   
 
-[![TelegramChannel](https://img.shields.io/badge/Telegram_Discussion_chat-2CA5E0?style=for-the-badge&logo=Telegram&logoColor=FFFFFF)](https://t.me/Graywizard_projects)
-
-
-
+   
