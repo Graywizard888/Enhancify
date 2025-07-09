@@ -11,6 +11,7 @@
 ## ❗ Important Notes
 ⚠ This project is a fork of [Revancify](https://github.com/decipher3114/Revancify)
 Please report issues only to the [Enhancify Repo](https://github.com/Graywizard888/Enhancify/issues)
+
 ## 🔥 Features That Make The Difference
 
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin: 20px 0;">
@@ -29,6 +30,7 @@ Please report issues only to the [Enhancify Repo](https://github.com/Graywizard8
 <ul>
 <li>Network acceleration for faster downloads</li>
 <li>Pre-release support (CLI, Patches, Options)</li>
+<li> Auto-launch when update instantly launch when installed</li>
 </ul>
 </div>
 
