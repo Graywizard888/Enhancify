@@ -8,9 +8,9 @@
 ![Termux](https://img.shields.io/badge/Termux-000000?style=for-the-badge&logo=termux&logoColor=green)
 
 ---
-## ❗ Important Notes
-⚠ This project is a fork of [Revancify](https://github.com/decipher3114/Revancify)
-Please report issues only to the [Enhancify Repo](https://github.com/Graywizard888/Enhancify/issues)
+## ❗ Important Notes:
+> ⚠ This project is a fork of [Revancify](https://github.com/decipher3114/Revancify)
+> Please report issues only to the [Enhancify Repo](https://github.com/Graywizard888/Enhancify/issues) and telegram discussion group
 
 ## 🔥 Features That Make The Difference
 
