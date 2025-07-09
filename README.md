@@ -30,7 +30,7 @@
 <ul>
 <li>Network acceleration for faster downloads</li>
 <li>Pre-release support (CLI, Patches, Options)</li>
-<li> Auto-launch when update instantly launch when installed</li>
+<li> Auto-launch when updated,  instantly launch when first time installed</li>
 </ul>
 </div>
 
