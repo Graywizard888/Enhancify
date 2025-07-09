@@ -8,7 +8,9 @@
 ![Termux](https://img.shields.io/badge/Termux-000000?style=for-the-badge&logo=termux&logoColor=green)
 
 ---
-
+## ❗ Important Notes
+⚠ This project is a fork of [Revancify](https://github.com/decipher3114/Revancify)
+Please report issues only to the [Enhancify Repo](https://github.com/Graywizard888/Enhancify/issues)
 ## 🔥 Features That Make The Difference
 
 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin: 20px 0;">
@@ -42,7 +44,7 @@
 <div style="background: #1e2b3c; padding: 15px; border-radius: 10px;">
 <h3>📦 Flexible App Support</h3>
 <ul>
-<li>Import apps when APKMirror fails</li>
+<li>Import apps when APKMirror Api fails</li>
 <li>Supports APK, APKM, XAPK formats</li>
 <li>XAPK language selection support</li>
 </ul>
@@ -52,6 +54,12 @@
 
 ---
 
+> ✨ Key changes Over Original:
+> - Cybernetic Green theme with modern UI
+> - Custom storage location (Internal Storage/Enhancify)
+> - Network acceleration for downloads
+> - Extended file format support (XAPK/APKM)
+> - Custom source management system
 ## 🚀 Installation Guide
 
 1. **Prepare Termux:**
