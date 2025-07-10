@@ -1,4 +1,11 @@
-# Enhancify 
+# Enhancify
+
+
+<div align="center">
+<a href="https://github.com/termux/termux-app">
+    <img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/Enhancify_banner.png" width="250px">
+</div>
+</a>
 
 > **The Ultimate Custom Revancify Experience**  
 > Enhanced patching with next-level features and personalization options
