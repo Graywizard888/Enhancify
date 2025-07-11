@@ -12,14 +12,28 @@
 [![Telegram Channel](https://img.shields.io/badge/Telegram_Discussion-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/Graywizard_projects)
 ![GitHub Repo stars](https://img.shields.io/github/stars/Graywizard888/Enhancify?style=for-the-badge&color=yellow)
 
-<a href="https://github.com/termux/termux-app">
-    <img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/Termux.png" width="50px">
-</a>
-
-
-<a href="https://github.com/Termux-Monet/termux-monet">
-    <img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/Termux_monet.png" width="50px">
-</a>
+---
+<div align="center">
+  <table style="border-collapse: collapse;">
+    <tr>
+      <td colspan="2" style="text-align: center; border-bottom: 4px solid #00ff00">
+        <h3>Supported on</h3>
+      </td>
+    </tr>
+    <tr>
+      <td style="text-align: center; padding: 20px">
+        <a href="https://github.com/termux/termux-app">
+          <img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/Termux.png" width="50px">
+        </a>
+      </td>
+      <td style="text-align: center; padding: 20px">
+        <a href="https://github.com/Termux-Monet/termux-monet">
+          <img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/Termux_monet.png" width="50px">
+        </a>
+      </td>
+    </tr>
+  </table>
+</div>
 
 ---
 ## ❗ Important Notes:
