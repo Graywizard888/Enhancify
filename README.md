@@ -2,7 +2,7 @@
 
 
 <div align="center">
-    <img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/Enhancify_banner.png" width="250px">
+    <img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/Enhancify_banner.png" width="350px">
 </div>
 
 
