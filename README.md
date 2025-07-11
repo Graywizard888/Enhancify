@@ -90,6 +90,11 @@
 > - Network acceleration for downloads
 > - Extended file format support (XAPK/APKM)
 > - Custom source management system
+
+## </> Coded With
+<img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/Bash_logo.png" width="80px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;   <img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/aria2c_banner.png" width="100px">
+
+
 ## 🚀 Installation Guide
 
 1. **Prepare Termux:**
@@ -100,6 +105,9 @@ Run later with
 ```bash
   enhancify
 
-   
+
+
+
+
 
    
