@@ -11,6 +11,8 @@
 
 [![Telegram Channel](https://img.shields.io/badge/Telegram_Discussion-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/Graywizard_projects)
 ![GitHub Repo stars](https://img.shields.io/github/stars/Graywizard888/Enhancify?style=for-the-badge&color=yellow)
+[![Last Updated](https://img.shields.io/github/last-commit/Graywizard888/Enhancify?label=Last%20Updated&style=for-the-badge)](https://github.com/Graywizard8888/Enhancify/commits)
+[![Latest Release](https://img.shields.io/github/v/release/Graywizard888/Enhancify?label=Latest%20Release&style=for-the-badge&color=#00ff7f)](https://github.com/Graywizard888/Enhancify/releases/latest)
 
 ---
 <div align="center">
