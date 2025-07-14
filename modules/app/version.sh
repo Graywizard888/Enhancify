@@ -4,7 +4,7 @@ scrapeVersionsList() {
     local PAGE_CONTENTS PAGE_JSON MERGED_JSON
     local IDX MAX_PAGE_COUNT
 
-    MAX_PAGE_COUNT=5
+    MAX_PAGE_COUNT=7
 
     for ((IDX = 1; IDX <= MAX_PAGE_COUNT; IDX++)); do
         TMP_FILES[IDX]=$(mktemp)
