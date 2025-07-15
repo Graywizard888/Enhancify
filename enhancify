@@ -79,6 +79,7 @@ installDependencies() {
     grep -q jq <<< "$BINS" || PKGS+=("jq")
     grep -q unzip <<< "$BINS" || PKGS+=("unzip")
     grep -q aria2c <<< "$BINS" || PKGS+=("aria2")
+    grep -q zip <<< "$BINS" || PKGS+=("zip")
 
     if [ "${#PKGS[@]}" -ne 0 ]; then
         pkg update || return 1
