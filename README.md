@@ -76,11 +76,12 @@
 </div>
 
 <div style="background: #1e2b3c; padding: 15px; border-radius: 10px;">
-<h3>📦 Flexible App Support</h3>
+<h3>📦 Flexible App Support With Extra Features</h3>
 <ul>
 <li>Import apps when APKMirror Api fails</li>
-<li>Supports APK, APKM, XAPK formats</li>
-<li>XAPK language selection support</li>
+<li>Supports APK, APKM, XAPK File formats</li>
+<li>XAPK Custom language selection support</li>
+<li>Optimize Libs (Aka Riplibs) Support For Apk Files
 </ul>
 </div>
 
@@ -92,8 +93,9 @@
 > - Cybernetic Green theme with modern UI
 > - Custom storage location (Internal Storage/Enhancify)
 > - Network acceleration for downloads
-> - Extended file format support (XAPK/APKM)
+> - Extended file format support (XAPK)
 > - Custom source management system
+> - Optimize Libs (Aka Riplibs) for apk files
 
 ## </> Coded With
 <img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/Bash_logo.png" width="80px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;   <img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/aria2c_banner.png" width="100px">
