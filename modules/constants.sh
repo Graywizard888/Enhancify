@@ -46,7 +46,7 @@ SELECTION_HINT="Select with [SPACE]"
 
 source .config
 
-[ "$DARK_THEME" == "on" ] && THEME="DARK" || THEME="GREEN"
+[ "$LIGHT_THEME" == "on" ] && THEME="LIGHT" || THEME="DARK"
 export DIALOGRC="config/.DIALOGRC_$THEME"
 
 ENHANCIFY_ART="   ____     __                 _ ___    \n  / __/__  / /  ___ ____  ____(_) _/_ __\n / _// _ \/ _ \/ _ \`/ _ \\/ __/ / _/ // /\n/___/_//_/_//_/\\_,_/_//_/\\__/_/_/ \\_, / \n                                 /___/  "
