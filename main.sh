@@ -13,7 +13,7 @@ main() {
 
     [ "$ROOT_ACCESS" == true ] && MENU_ENTRY=(7 "Unmount Patched app")
 
-    [ "$DARK_THEME" == "on" ] && THEME="DARK" || THEME="GREEN"
+    [ "$LIGHT_THEME" == "on" ] && THEME="LIGHT" || THEME="DARK"
     export DIALOGRC="config/.DIALOGRC_$THEME"
 
     while true; do
