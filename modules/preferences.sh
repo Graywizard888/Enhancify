@@ -56,6 +56,6 @@ toggle_options() {
         notify msg "WARNING: \nPre-release patches are enabled. \nThis Patches Are Under Development And Can Cause Issues While Patching And App Runtime"
     fi
 
-    [ "$DARK_THEME" == "on" ] && THEME="DARK" || THEME="GREEN"
+    [ "$LIGHT_THEME" == "on" ] && THEME="LIGHT" || THEME="DARK"
     export DIALOGRC="config/.DIALOGRC_$THEME"
 }
