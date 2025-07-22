@@ -30,7 +30,7 @@ use_shadow = OFF
 use_colors = ON
 
 # Screen color
-screen_color = (BLACK,WHITE,OFF)
+screen_color = (GREEN,BLACK,OFF)
 
 # Shadow color
 shadow_color = (WHITE,WHITE,OFF)
@@ -45,7 +45,7 @@ title_color = screen_color
 border_color = screen_color
 
 # Active button color
-button_active_color = (WHITE,BLACK,OFF)
+button_active_color = (BLACK,GREEN,OFF)
 
 # Inactive button color
 button_inactive_color = screen_color
