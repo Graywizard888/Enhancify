@@ -14,7 +14,7 @@
 [![Sponsors](https://img.shields.io/github/sponsors/Graywizard888?style=for-the-badge&logo=githubsponsors&label=Sponsors&labelColor=1e1e1e&color=ff69b4&logoColor=white&query=%24.total)](https://github.com/sponsors/Graywizard888)
 
 [![Last Updated](https://img.shields.io/github/last-commit/Graywizard888/Enhancify?label=Last%20Updated&style=for-the-badge)](https://github.com/Graywizard8888/Enhancify/commits)
-[![Latest Release](https://img.shields.io/github/v/release/Graywizard888/Enhancify?label=Latest%20Release&style=for-the-badge&color=#00ff7f)](https://github.com/Graywizard888/Enhancify/releases/latest)
+[![Latest Release](https://img.shields.io/github/v/release/Graywizard888/Enhancify?label=Latest%20Release&style=for-the-badge&color=#00ff7f)](https://github.com/Graywizard888/Enhancify/releases)
 
 ---
 <div align="center">
