@@ -13,7 +13,7 @@ add_github_token() {
             --title 'Add custom token' \
             --no-cancel  \
             --ok-label 'Done' \
-            --inputbox "Enter GitHub classic token:" -1 -1 \
+            --inputbox "Enter GitHub classic token:  (ctrl+c) to exit" -1 -1 \
             2>&1 > /dev/tty)
 
         if [[ -z "${TOKEN_INPUT// }" ]]; then
