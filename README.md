@@ -27,13 +27,15 @@
     <tr>
       <td style="text-align: center; padding: 20px">
         <a href="https://github.com/termux/termux-app">
-          <img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/Termux.png" width="50px">
+          <img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/Termux.png" width="80px">
         </a>
+        <div style="margin-top: 8px; font-weight: bold;">Termux</div>
       </td>
       <td style="text-align: center; padding: 20px">
-        <a href="https://github.com/Termux-Monet/termux-monet">
-          <img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/Termux_monet.png" width="50px">
+        <a href="https://github.com/Graywizard888/Terminal_EX">
+          <img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/Termux_monet.png" width="80px">
         </a>
+        <div style="margin-top: 8px; font-weight: bold;">Terminal Ex</div>
       </td>
     </tr>
   </table>
