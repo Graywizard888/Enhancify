@@ -56,7 +56,7 @@ Fetch_MicroG() {
             if [ -f "$output_file" ]; then
                 local actual_size=$(stat -c %s "$output_file" 2>/dev/null)
                 if [ -n "$actual_size" ] && [ "$actual_size" -gt $((size * 9/10)) ]; then
-                    notify msg "$provider GmsCore downloaded successfully!\nSaved at: $output_file"
+                    notify msg "$provider GmsCore downloaded successfully!\nSaved at: Internal Storage/Enhancify/GmsCore/$filename"
                     return 0
                     tput civis
 
