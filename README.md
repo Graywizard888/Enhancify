@@ -65,7 +65,7 @@
 <li>Network acceleration for faster downloads</li>
 <li>Pre-release support (CLI, Patches, Options)</li>
 <li> Auto-launch when updated,  instantly launch when first time installed</li>
-<li> Custom Github Token For Avoiding Rate Limiting</li>
+<li> Custom Github Token For Avoiding Rate Limiting (Experimental)</li>
 </ul>
 </div>
 
@@ -99,6 +99,7 @@
 > - Extended file format support (XAPK)
 > - Custom source management system
 > - Optimize Libs (Aka Riplibs) for apk files
+> - GmsCore Downloader (Fetch GmsCore) 
 
 ## </> Coded With
 <img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/Bash_logo.png" width="80px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;   <img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/aria2c_banner.png" width="100px">
