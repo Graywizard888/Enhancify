@@ -1,7 +1,6 @@
 Fetch_MicroG() {
     STORAGE_PATH="$STORAGE"
     local microg_dir="$STORAGE/GmsCore"
-    mkdir -p "$microg_dir"
 
     local GITHUB_TOKEN=$(get_github_token)
     local curl_opts=("${CURL[@]}")
