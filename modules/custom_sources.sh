@@ -6,7 +6,7 @@ custom_source_management() {
             --no-cancel \
             --ok-label 'Select' \
             --menu "$NAVIGATION_HINT\n$SELECTION_HINT" -1 -1 -1 \
-            "Add Source" "Add new custom source (Experimental)" \
+            "Add Source" "Add new custom source" \
             "Edit Sources" "Modify existing custom sources" \
             "Delete Sources" "Remove existing sources" \
             "Description" "How to add sources" \
