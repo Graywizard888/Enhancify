@@ -9,7 +9,7 @@ main() {
     setEnv ALLOW_APP_VERSION_DOWNGRADE "off" init .config
     source .config
 
-    mkdir -p "assets" "apps" "$STORAGE" "$STORAGE/Patched" "$STORAGE/Stock"
+    mkdir -p "assets" "apps" "$STORAGE" "$STORAGE/Patched" "$STORAGE/GmsCore"
 
     [ "$ROOT_ACCESS" == true ] && MENU_ENTRY=(8 "Unmount Patched app")
 
