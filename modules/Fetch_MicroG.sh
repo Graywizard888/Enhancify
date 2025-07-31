@@ -12,7 +12,7 @@ Fetch_MicroG() {
         --cancel-label Back \
         --ok-label Download \
         --menu 'Select GmsCore provider:' -1 -1 -1 \
-        1 "Wst_Xda MicroG (Recommended)" \
+        1 "Wst_Xda (Recommended)" \
         2 "Revanced " \
         3 "Rex " \
         3>&1 1>&2 2>&3
