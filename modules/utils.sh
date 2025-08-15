@@ -26,7 +26,7 @@ notify() {
 }
 
 internet() {
-    if ! ping -c 1 google.com &> /dev/null; then
+    if ! ping -c 1 github.com &> /dev/null; then
         notify msg "Oops! No Internet Connection available.\n\nConnect to Internet and try again later."
         return 1
     fi
