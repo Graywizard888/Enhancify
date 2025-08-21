@@ -65,6 +65,7 @@
 <li>Network acceleration for faster downloads</li>
 <li>Pre-release support (CLI, Patches, Options)</li>
 <li> Auto-launch when updated,  instantly launch when first time installed</li>
+<li> Modern Tweaks For  Improving Github Api Performance </li>
 </ul>
 </div>
 
@@ -74,6 +75,7 @@
 <li>Custom sources management (add/edit/delete)</li>
 <li>Preloaded protected sources</li>
 <li>New storage path: Internal Storage/Enhancify</li>
+<li> Maintains Proper Github Api Logs in Enhancify/github_api_log.json</li>
 </ul>
 </div>
 
