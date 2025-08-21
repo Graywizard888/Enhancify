@@ -65,7 +65,6 @@
 <li>Network acceleration for faster downloads</li>
 <li>Pre-release support (CLI, Patches, Options)</li>
 <li> Auto-launch when updated,  instantly launch when first time installed</li>
-<li> Custom Github Token For Avoiding Rate Limiting (Experimental)</li>
 </ul>
 </div>
 
