@@ -65,7 +65,7 @@
 <li>Network acceleration for faster downloads</li>
 <li>Pre-release support (CLI, Patches, Options)</li>
 <li> Auto-launch when updated,  instantly launch when first time installed</li>
-<li> Modern Tweaks For  Improving Github Api Performance </li>
+<li> Modern Tweaks For  Improving Github Api Performance and Apkmirror Reliability</li>
 </ul>
 </div>
 
