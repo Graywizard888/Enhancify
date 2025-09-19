@@ -2,7 +2,7 @@
 auto_update() {
     local target_pkgs=("wget" "ncurses-utils" "dialog" "pup" "jq" "aria2" "unzip" "zip")
 
-    notify info "Starting package upgrade check..."
+    notify info "Starting dependency packages versions check..."
     pkg update >/dev/null 2>&1
 
     local upgradable
@@ -22,9 +22,9 @@ auto_update() {
 
     if [ ${#to_upgrade[@]} -gt 0 ]; then
         notify info "Upgrading packages: ${to_upgrade[*]}"
-        pkg upgrade -y "${to_upgrade[@]}" >/dev/null 2>&1
+        pkg install -y "${to_upgrade[@]}" >/dev/null 2>&1
         notify msg "Upgrade complete!"
     else
-        notify msg "No updates available for target packages"
+        notify msg "No updates available for dependency packages"
     fi
 }
