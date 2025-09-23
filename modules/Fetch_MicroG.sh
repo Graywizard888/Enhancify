@@ -78,6 +78,7 @@ Fetch_MicroG() {
                 local actual_size=$(stat -c %s "$output_file" 2>/dev/null)
                 if [ -n "$actual_size" ] && [ "$actual_size" -gt $((size * 9/10)) ]; then
                     notify msg "$provider GmsCore downloaded successfully!\nSaved at: Internal Storage/Enhancify/GmsCore/$filename"
+                    termux-open --view "$output_file"
                     return 0
                     tput civis
                 fi
