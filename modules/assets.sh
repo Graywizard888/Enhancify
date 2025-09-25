@@ -49,6 +49,7 @@ downloadFile() {
             cd "$dir" || exit 1
 
             aria2c --console-log-level=warn --summary-interval=1 --download-result=hide \
+                   --no-conf \
                    --out="$file" \
                    --split=4 --min-split-size=5M --max-connection-per-server=4 \
                    --file-allocation=none \
