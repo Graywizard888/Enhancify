@@ -76,6 +76,7 @@
 <li>Preloaded protected sources</li>
 <li>New storage path: Internal Storage/Enhancify</li>
 <li> Maintains Proper Github Api Logs in Enhancify/github_api_log.json</li>
+<li>Custom Keystore Management</li>
 </ul>
 </div>
 
@@ -100,7 +101,8 @@
 > - Extended file format support (XAPK)
 > - Custom source management system
 > - Optimize Libs (Aka Riplibs) for apk files
-> - GmsCore Downloader (Fetch GmsCore) 
+> - GmsCore Downloader (Fetch GmsCore)
+> - custom keystore management
 
 ## </> Coded With
 <img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/Bash_logo.png" width="80px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;   <img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/aria2c_banner.png" width="100px">
