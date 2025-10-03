@@ -2,6 +2,8 @@ installApp() {
     local CANONICAL_VER
     if [ "$ROOT_ACCESS" == true ]; then
         mountApp
+    elif [ "$RISH_ACCESS" == true ]; then
+        installAppRish
     else
         local apk_path="apps/$APP_NAME/$APP_VER-$SOURCE.apk"
         local signed_apk_path="apps/$APP_NAME/$APP_VER-$SOURCE.apk"
