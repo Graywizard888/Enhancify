@@ -12,7 +12,12 @@ DPI=$(getprop ro.sf.lcd_density)
 
 USER_AGENT="APKUpdater-3.0.3"
 
-ROOT_STATUS=$(if [ "$(id -u)" -eq 0 ]; then echo 'Root Mode'; else echo 'Non-Root Mode'; fi)
+PRIVILEGE_STATUS="Non-privilege Mode"
+if [ "$ROOT_ACCESS" != false ] && su -c 'exit' &> /dev/null; then
+PRIVILEGE_STATUS="Root Mode"
+elif [ "$RISH_ACCESS" != false ] && rish -c 'exit' &> /dev/null; then
+PRIVILEGE_STATUS="Rish Mode"
+fi
 
 APKMIRROR_REACHABLE=false
 GITHUB_REACHABLE=false
@@ -35,7 +40,7 @@ else
     ONLINE_STATUS="Offline"
 fi
 
-DIALOG=(dialog --backtitle "Enhancify | $ROOT_STATUS | $ONLINE_STATUS | Arch: $ARCH" --no-shadow --begin 2 0)
+DIALOG=(dialog --backtitle "Enhancify | $PRIVILEGE_STATUS | $ONLINE_STATUS | Arch: $ARCH" --no-shadow --begin 2 0)
 
 CURL=(curl -sL --fail-early --connect-timeout 2 --max-time 5 -H 'Cache-Control: no-cache')
 
