@@ -11,8 +11,6 @@
 
 [![Telegram Channel](https://img.shields.io/badge/Telegram_Discussion-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/Graywizard_projects)
 [![GitHub Repo stars](https://img.shields.io/github/stars/Graywizard888/Enhancify?style=for-the-badge&color=yellow)](https://github.com/Graywizard888/Enhancify/stargazers)
-[![Sponsors](https://img.shields.io/github/sponsors/Graywizard888?style=for-the-badge&logo=githubsponsors&label=Sponsors&labelColor=1e1e1e&color=ff69b4&logoColor=white&query=%24.total)](https://github.com/sponsors/Graywizard888)
-
 ![Last Updated](https://img.shields.io/github/last-commit/Graywizard888/Enhancify?label=Last%20Updated&style=for-the-badge)
 [![Latest Release](https://img.shields.io/github/v/release/Graywizard888/Enhancify?label=Latest%20Release&style=for-the-badge&color=#00ff7f)](https://github.com/Graywizard888/Enhancify/releases)
 
