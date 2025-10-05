@@ -40,7 +40,7 @@ if [ "$(rish -c "[ -e $PATCHED_APP_PATH ] && echo Exists || echo Missing")" == "
     exit 1
 fi
 
-CMD_RISH="pm install -r --user current $PATCHED_APP_PATH"
+CMD_RISH="pm install -r -i com.android.vending --user current $PATCHED_APP_PATH"
 
 # We execute the install command using rish
 OUTPUT=$(rish -c "$CMD_RISH" 2>&1)
