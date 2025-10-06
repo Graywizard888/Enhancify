@@ -64,8 +64,11 @@
 <li>Pre-release support (CLI, Patches, Options)</li>
 <li> Auto-launch when updated,  instantly launch when first time installed</li>
 <li> Modern Tweaks For  Improving Github Api Performance and Apkmirror Reliability</li>
-</ul>
+
+<li>Rish Apk Installation Support</li>
+<li>Spoof Installation Location To Play Store (Rish Mode Only)</li>
 </div>
+</ul>
 
 <div style="background: #1e2b3c; padding: 15px; border-radius: 10px;">
 <h3>🔧 Advanced Customization</h3>
@@ -101,6 +104,7 @@
 > - Optimize Libs (Aka Riplibs) for apk files
 > - GmsCore Downloader (Fetch GmsCore)
 > - custom keystore management
+> - Rish Apk Installation Support 
 
 ## </> Coded With
 <img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/Bash_logo.png" width="80px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;   <img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/aria2c_banner.png" width="100px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/ApkSigner.png" width="80px"> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/ShizukuRish.png" width="100px">
