@@ -2,8 +2,6 @@ installApp() {
     local CANONICAL_VER
     if [ "$ROOT_ACCESS" == true ]; then
         mountApp
-    elif [ "$RISH_ACCESS" == true ]; then
-        installAppRish
     else
         local apk_path="apps/$APP_NAME/$APP_VER-$SOURCE.apk"
         local signed_apk_path="apps/$APP_NAME/$APP_VER-$SOURCE.apk"
@@ -138,7 +136,11 @@ installApp() {
             cp -f "$apk_path" "$signed_apk_path" &>/dev/null
             apk_path="$signed_apk_path"
         fi
-
+        if [ "$RISH_ACCESS" == true ]; then
+            notify info "Initiating Installation via Rish..."
+            sleep 1
+            installAppRish
+        else
         notify info "Copying patched $APP_NAME apk to Internal Storage..."
         CANONICAL_VER=${APP_VER//:/}
         local final_apk_path="$STORAGE/Patched/$APP_NAME-$CANONICAL_VER-$SOURCE.apk"
