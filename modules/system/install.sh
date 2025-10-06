@@ -143,7 +143,7 @@ installApp() {
             sleep 1
             installAppRish
         else
-        notify info "Copying patched $APP_NAME apk to Internal Storage..."
+        notify info "No Previleges Detected\n\nCopying patched $APP_NAME apk to Internal Storage..."
         CANONICAL_VER=${APP_VER//:/}
         local final_apk_path="$STORAGE/Patched/$APP_NAME-$CANONICAL_VER-$SOURCE.apk"
 
