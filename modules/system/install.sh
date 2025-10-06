@@ -1,6 +1,8 @@
 installApp() {
     local CANONICAL_VER
     if [ "$ROOT_ACCESS" == true ]; then
+        notify info "Initiating Mounting via Root Previlege..."
+        sleep 1
         mountApp
     else
         local apk_path="apps/$APP_NAME/$APP_VER-$SOURCE.apk"
@@ -137,7 +139,7 @@ installApp() {
             apk_path="$signed_apk_path"
         fi
         if [ "$RISH_ACCESS" == true ]; then
-            notify info "Initiating Installation via Rish..."
+            notify info "Initiating Installation via Rish Previlege..."
             sleep 1
             installAppRish
         else
