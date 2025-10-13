@@ -56,7 +56,7 @@ export DIALOGRC="config/.DIALOGRC_$THEME"
 
 ENHANCIFY_ART="   ____     __                 _ ___    \n  / __/__  / /  ___ ____  ____(_) _/_ __\n / _// _ \/ _ \/ _ \`/ _ \\/ __/ / _/ // /\n/___/_//_/_//_/\\_,_/_//_/\\__/_/_/ \\_, / \n                                 /___/  "
 
-dialog --keep-window --no-shadow --keep-window --infobox "\n$ENHANCIFY_ART\n\nModifier     : Graywizard888\nLast Updated : Checking...\nStatus       : Checking..." 13 45
+dialog --keep-window --no-shadow --keep-window --infobox "\n$ENHANCIFY_ART\n\nModifier     : Graywizard\nLast Updated : Checking...\nStatus       : Checking..." 13 45
 sleep 3
 
 if $GITHUB_REACHABLE; then
