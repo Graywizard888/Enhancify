@@ -112,13 +112,16 @@
 
 ## 🚀 Installation Guide
 
-1. **Prepare Termux:**
-   ```bash
-   termux-setup-storage && git clone https://github.com/Graywizard888/Enhancify.git && cd Enhancify && bash install.sh
+1.**Prepare Termux:**
+```bash
+termux-setup-storage && git clone https://github.com/Graywizard888/Enhancify.git && cd Enhancify && bash install.sh
+```
 
-Run later with
+
+2.**Run later with**
 ```bash
   enhancify
+```
 
 
 
