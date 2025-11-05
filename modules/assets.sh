@@ -94,8 +94,8 @@ fetchAssetsInfo() {
         --compressed \
         --retry 3 \
         --retry-delay 1 \
-        -A "$USER_AGENT_GITHUB" \
         --resolve "api.github.com:443:${IP}" \
+        -A "User-Agent: $USER_AGENT_GITHUB" \
         -H "Accept: application/vnd.github+json" \
         -H "X-GitHub-Api-Version: 2022-11-28" \
         -D headers.tmp)
