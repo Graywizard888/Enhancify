@@ -11,6 +11,7 @@ ARCH=$(getprop ro.product.cpu.abi)
 DPI=$(getprop ro.sf.lcd_density)
 
 USER_AGENT="APKUpdater-3.0.3"
+USER_AGENT_GITHUB="Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Mobile Safari/537.36 EdgA/142.0.0.0"
 
 PRIVILEGE_STATUS="Non-privilege Mode"
 if [ "$ROOT_ACCESS" != false ] && su -c 'exit' &> /dev/null; then
