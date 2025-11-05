@@ -8,6 +8,7 @@ Fetch_MicroG() {
         --compressed \
         --retry 3 \
         --retry-delay 1 \
+        -A "$USER_AGENT_GITHUB" \
         --resolve "api.github.com:443:${IP}" \
         -A "User-Agent: $UserAgentGithub" \
         -H "Accept: application/vnd.github+json" \
