@@ -9,7 +9,7 @@ Fetch_MicroG() {
         --retry 3 \
         --retry-delay 1 \
         --resolve "api.github.com:443:${IP}" \
-        -A "User-Agent: $USER_AGENT_GITHUB" \
+        -A "$USER_AGENT_GITHUB" \
         -H "Accept: application/vnd.github+json" \
         -H "X-GitHub-Api-Version: 2022-11-28" \
         -D headers.tmp)
