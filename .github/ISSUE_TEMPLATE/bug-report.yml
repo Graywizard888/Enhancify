@@ -38,7 +38,7 @@ body:
     attributes:
       label: 📸 Screenshots / Videos
       description: If applicable, add screenshots or videos to help explain your problem
-      placeholder: Drag and drop images or videos here...
+      placeholder: Drag and drop images or videos here or link if hosted somewhere...
     validations:
       required: false
 
@@ -51,9 +51,9 @@ body:
         - 🟢 Low - Minor issue, workaround available
         - 🟡 Medium - Affects functionality but not critical
         - 🟠 High - Major functionality broken
-        - 🔴 Critical - System/App is unusable
+        - 🔴 Critical - Everything is unusable
     validations:
-      required: true
+      required: false
 
   - type: textarea
     id: logs
@@ -85,7 +85,7 @@ body:
         - Huawei
         - Honor
         - Nothing
-        - Other
+        - Other (write below)
     validations:
       required: true
 
@@ -104,6 +104,8 @@ body:
       label: 🤖 Android Version
       description: What Android version are you running?
       options:
+        - Android 16 (Api 36)
+        - Android 15 (Api 35)
         - Android 14 (API 34)
         - Android 13 (API 33)
         - Android 12 (API 32)
@@ -114,7 +116,7 @@ body:
         - Android 8.1 Oreo (API 27)
         - Android 8.0 Oreo (API 26)
         - Older version (write below)
-        - I don't know
+        - 🤷 I don't know 
     validations:
       required: true
 
