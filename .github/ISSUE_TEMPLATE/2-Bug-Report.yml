@@ -169,9 +169,9 @@ body:
         - label: I am willing to help fix this bug if guided
           required: false
 
-   - type: markdown
+  - type: markdown
     attributes:
       value: |
         ---
         
-        ### 💙 Thank You For Making Project Better       
+        ### 💙 Thank You For Making Project Better 
