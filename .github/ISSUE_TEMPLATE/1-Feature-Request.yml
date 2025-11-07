@@ -101,3 +101,10 @@ body:
           required: false
         - label: I am willing to sponsor/fund this feature
           required: false
+
+    - type: markdown
+    attributes:
+      value: |
+        ---
+        
+        ### 💙 Thank You For Your Kind Co-Operation
