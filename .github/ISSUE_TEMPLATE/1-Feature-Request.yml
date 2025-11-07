@@ -24,7 +24,7 @@ body:
     id: alternatives
     attributes:
       label: 🔀 Alternatives Considered
-      description: Have you considered any alternative solutions or features ?
+      description: Have you considered any alternative solutions or features?
       placeholder: I've also thought about...
     validations:
       required: false
@@ -33,7 +33,7 @@ body:
     id: priority
     attributes:
       label: 📊 Priority
-      description: How important is this feature to you ?
+      description: How important is this feature to you?
       options:
         - 🟢 Nice to have
         - 🟡 Important
@@ -45,7 +45,7 @@ body:
     id: category
     attributes:
       label: 🏷️ Feature Category
-      description: What category does this feature fall under ?
+      description: What category does this feature fall under?
       options:
         - 🎨 UI/UX Improvement
         - ⚡ Performance Enhancement
@@ -70,7 +70,7 @@ body:
     id: benefits
     attributes:
       label: ✅ Benefits
-      description: What benefits will this feature bring ?
+      description: What benefits will this feature bring?
       placeholder: |
         - Improves user experience by...
         - Saves time when...
@@ -82,7 +82,7 @@ body:
     id: implementation
     attributes:
       label: 🛠️ Implementation Ideas
-      description: Do you have any ideas on how this could be implemented ?
+      description: Do you have any ideas on how this could be implemented?
       placeholder: This could be implemented by...
     validations:
       required: false
@@ -102,9 +102,9 @@ body:
         - label: I am willing to sponsor/fund this feature
           required: false
 
-    - type: markdown
+  - type: markdown
     attributes:
       value: |
         ---
         
-        ### 💙 Thank You For Your Kind Co-Operation
+        ### 💙 Thank You For Your Kind Co-Operation 
