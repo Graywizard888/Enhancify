@@ -13,17 +13,17 @@ body:
         Please provide as much detail as possible so we can give you the best answer.
         
         ---
-        
-- type: textarea
+
+  - type: textarea
     id: question
     attributes:
       label: ❓ Your Question
       description: Ask your question clearly and concisely
-      placeholder: What would you like to know ?
+      placeholder: What would you like to know?
     validations:
       required: true
       
-- type: textarea
+  - type: textarea
     id: screenshots
     attributes:
       label: 📸 Screenshots (if applicable)
@@ -31,8 +31,12 @@ body:
       placeholder: Drag and drop images here...
     validations:
       required: false
-      
-  ### 💙 Thank you for your question!
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        
+        ### 💙 Thank you for your question!
         
         We'll do our best to answer as soon as possible. Consider joining our community discussions for faster responses!
-      
