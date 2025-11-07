@@ -2,7 +2,7 @@ name: ❓ Question
 description: Ask a question about the project
 title: "[QUESTION] "
 labels: ["question", "needs-response"]
-assignees: []
+assignees: [Graywizard888]
 
 body:
   - type: markdown
@@ -13,6 +13,7 @@ body:
         Please provide as much detail as possible so we can give you the best answer.
         
         ---
+        
 - type: textarea
     id: question
     attributes:
