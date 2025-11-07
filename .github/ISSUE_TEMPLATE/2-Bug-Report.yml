@@ -168,3 +168,10 @@ body:
           required: true
         - label: I am willing to help fix this bug if guided
           required: false
+
+   - type: markdown
+    attributes:
+      value: |
+        ---
+        
+        ### 💙 Thank You For Making Project Better       
