@@ -1,0 +1,37 @@
+name: ❓ Question
+description: Ask a question about the project
+title: "[QUESTION] "
+labels: ["question", "needs-response"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 👋 Welcome! We're here to help!
+        
+        Please provide as much detail as possible so we can give you the best answer.
+        
+        ---
+- type: textarea
+    id: question
+    attributes:
+      label: ❓ Your Question
+      description: Ask your question clearly and concisely
+      placeholder: What would you like to know ?
+    validations:
+      required: true
+      
+- type: textarea
+    id: screenshots
+    attributes:
+      label: 📸 Screenshots (if applicable)
+      description: Add screenshots from enhancify to better understand your question
+      placeholder: Drag and drop images here...
+    validations:
+      required: false
+      
+  ### 💙 Thank you for your question!
+        
+        We'll do our best to answer as soon as possible. Consider joining our community discussions for faster responses!
+      
