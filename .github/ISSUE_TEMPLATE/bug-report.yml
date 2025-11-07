@@ -86,7 +86,7 @@ body:
         - Honor
         - Nothing
         - Other
-      validations:
+    validations:
       required: true
 
   - type: input
