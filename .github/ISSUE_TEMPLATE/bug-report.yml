@@ -65,7 +65,7 @@ body:
     validations:
       required: false
 
-- type: dropdown
+  - type: dropdown
     id: android-brand
     attributes:
       label: 📱 Device Manufacturer
