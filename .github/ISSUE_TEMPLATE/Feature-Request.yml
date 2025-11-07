@@ -1,0 +1,103 @@
+name: 🔬 Feature Request
+description: Suggest a new feature or enhancement
+title: "[Feature]: "
+labels: ["enhancement", "needs-review"]
+assignees: [Graywizard888]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🎉 Thanks for suggesting a new feature!
+        We appreciate your ideas to make this project better.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: 💡 Feature Summary
+      description: A clear and concise description of the feature
+      placeholder: Briefly describe your feature idea...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: 🔀 Alternatives Considered
+      description: Have you considered any alternative solutions or features ?
+      placeholder: I've also thought about...
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 📊 Priority
+      description: How important is this feature to you ?
+      options:
+        - 🟢 Nice to have
+        - 🟡 Important
+        - 🟠 Very Important
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: 🏷️ Feature Category
+      description: What category does this feature fall under ?
+      options:
+        - 🎨 UI/UX Improvement
+        - ⚡ Performance Enhancement
+        - 🔧 New Functionality
+        - 🔒 Security
+        - 🧪 Testing
+        - 🔌 Integration
+        - 🎯 Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: mockups
+    attributes:
+      label: 🎨 Images / Examples
+      description: Add any Images, videos, or examples from other apps/scripts
+      placeholder: Drag and drop images/videos here or provide links if hosted somewhere...
+    validations:
+      required: false
+
+  - type: textarea
+    id: benefits
+    attributes:
+      label: ✅ Benefits
+      description: What benefits will this feature bring ?
+      placeholder: |
+        - Improves user experience by...
+        - Saves time when...
+        - Enables users to...
+    validations:
+      required: true
+
+  - type: textarea
+    id: implementation
+    attributes:
+      label: 🛠️ Implementation Ideas
+      description: Do you have any ideas on how this could be implemented ?
+      placeholder: This could be implemented by...
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: terms
+    attributes:
+      label: ✔️ Checklist
+      description: Please confirm the following
+      options:
+        - label: I have searched existing issues to avoid duplicates
+          required: true
+        - label: This feature aligns with the project's goals
+          required: true
+        - label: I am willing to help implement this feature
+          required: false
+        - label: I am willing to sponsor/fund this feature
+          required: false
