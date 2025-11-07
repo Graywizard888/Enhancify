@@ -1,4 +1,4 @@
-name: 🐛 Bug Report
+name: 🐞 Bug Report
 description: Report a bug or unexpected behavior
 title: "[Bug]: "
 labels: ["bug", "needs-triage"]
@@ -32,16 +32,7 @@ body:
         4. See error
     validations:
       required: true
-
-  - type: textarea
-    id: actual
-    attributes:
-      label: ❌ Actual Behavior
-      description: What actually happened?
-      placeholder: Describe what actually happened...
-    validations:
-      required: true
-
+      
   - type: textarea
     id: screenshots
     attributes:
@@ -71,6 +62,86 @@ body:
       description: Please copy and paste any relevant error logs
       placeholder: Paste error logs here...
       render: shell
+    validations:
+      required: false
+
+- type: dropdown
+    id: android-brand
+    attributes:
+      label: 📱 Device Manufacturer
+      description: Select your Android device manufacturer
+      options:
+        - Samsung
+        - Google (Pixel)
+        - OnePlus
+        - Xiaomi / Redmi / Poco
+        - Oppo
+        - Vivo
+        - Realme
+        - Motorola
+        - Nokia
+        - Sony
+        - Asus
+        - Huawei
+        - Honor
+        - Nothing
+        - Other
+      validations:
+      required: true
+
+  - type: input
+    id: android-model
+    attributes:
+      label: 📲 Device Model
+      description: Enter your exact device model
+      placeholder: e.g., Galaxy S23 Ultra, Pixel 8 Pro, OnePlus 12
+    validations:
+      required: true
+
+  - type: dropdown
+    id: android-version
+    attributes:
+      label: 🤖 Android Version
+      description: What Android version are you running?
+      options:
+        - Android 14 (API 34)
+        - Android 13 (API 33)
+        - Android 12 (API 32)
+        - Android 12L (API 31)
+        - Android 11 (API 30)
+        - Android 10 (API 29)
+        - Android 9 Pie (API 28)
+        - Android 8.1 Oreo (API 27)
+        - Android 8.0 Oreo (API 26)
+        - Older version (write below)
+        - I don't know
+    validations:
+      required: true
+
+  - type: dropdown
+    id: root-status
+    attributes:
+      label: 🔓 Root Status
+      description: Is your device rooted?
+      options:
+        - ❌ Not Rooted
+        - ✅ Rooted (Magisk)
+        - ✅ Rooted (KernalSU Next)
+        - ✅ Rooted (KernelSU)
+        - ✅ Rooted (Other)
+        - 🤷 I don't know
+    validations:
+      required: true
+
+  - type: dropdown
+    id: custom-rom
+    attributes:
+      label: 🎨 Custom ROM
+      description: Are you using a custom ROM?
+      options:
+        - Yes
+        - No
+        - I don't know
     validations:
       required: false
 
