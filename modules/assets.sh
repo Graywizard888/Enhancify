@@ -112,13 +112,10 @@ fetchAssetsInfo() {
         AUTH_TEXT="[Authorised]"
     fi
 
-    IP=$(dig @1.1.1.1 api.github.com +short | head -n1)
-
     local CURL_CMD=("${CURL[@]}" \
         --compressed \
         --retry 3 \
         --retry-delay 1 \
-        --resolve "api.github.com:443:${IP}" \
         -A "$USER_AGENT_GITHUB" \
         -H "Accept: application/vnd.github+json" \
         -H "X-GitHub-Api-Version: 2022-11-28")
