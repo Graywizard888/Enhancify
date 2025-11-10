@@ -6,7 +6,7 @@ TOKEN_FILE="$TOKEN_DIR/github_token.json"
 verify_token() {
     local token="$1"
     
-    notify info "Verifying"
+    notify info "Verifying Credentials"
     
     response=$(curl -s -o /dev/null -w "%{http_code}" \
         -H "Authorization: Bearer $token" \
@@ -20,7 +20,7 @@ verify_token() {
 }
 
 add_keystore() {
-    token=$(dialog --title "| Add Custom Keystore |" \
+    token=$(dialog --title "| Add Custom Token |" \
         --ok-label "Import" \
         --cancel-label "Cancel" \
         --inputbox "Enter your GitHub Token (Classic):" -1 -1 \
@@ -40,12 +40,12 @@ add_keystore() {
         echo "{}" | jq --arg token "$token" '.token = $token' > "$TOKEN_FILE"
         
         if [ $? -eq 0 ]; then
-            notify msg "Token imported successfully!"
+            notify msg "Github (Classic) Token Imported Successfully!"
         else
-            notify msg "Failed to import token"
+            notify msg "Failed to import Github (Classic) token"
         fi
     else
-        notify msg "Token invalid"
+        notify msg "Verification Failed\nEntered Token Credentials May Invalid"
         return 1
     fi
 }
@@ -57,20 +57,20 @@ delete_keystore() {
     result=$?
     
     if [ $result -eq 0 ]; then
-        notify info "Removing Token Entry"
+        notify info "Removing Github (Clsssic) Token Entry"
         
         if [ -f "$TOKEN_FILE" ]; then
             rm -f "$TOKEN_FILE"
             
             if [ $? -eq 0 ]; then
-                notify msg "Token removed sucessfully"
+                notify msg " Github (Classic) Token Removed Sucessfully"
                 return 0
             else
-                notify msg "Failed to remove token"
+                notify msg "Failed to remove Github (Classic) Token"
                 return 1
             fi
         else
-            notify msg "No token file detected"
+            notify msg "No Github (Classic) Token Detected In System"
             return 1
         fi
     fi
@@ -132,7 +132,7 @@ NOTE:
 custom_token() {
     while true; do
         MAIN_CHOICE=$("${DIALOG[@]}" \
-            --title '| Custom Token Management |' \
+            --title '| Custom Github Token Management |' \
             --cancel-label 'Back' \
             --ok-label 'Select' \
             --menu "Choose an option:" -1 -1 -1 \
