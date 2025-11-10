@@ -78,6 +78,7 @@
 <li>New storage path: Internal Storage/Enhancify</li>
 <li> Maintains Proper Github Api Logs in Enhancify/github_api_log.json</li>
 <li>Custom Keystore Management</li>
+<li> Custom Github Token Management </li>
 </ul>
 </div>
 
