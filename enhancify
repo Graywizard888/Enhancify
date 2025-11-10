@@ -152,7 +152,6 @@ installDependencies() {
     grep -q '^unzip$' <<< "$BINS" || PKGS+=("unzip")
     grep -q '^zip$' <<< "$BINS" || PKGS+=("zip")
     grep -q apksigner <<< "$BINS" || PKGS+=("apksigner")
-    grep -q dig <<< "$BINS" || PKGS+=("dnsutils")
 
     if [ "${#PKGS[@]}" -ne 0 ]; then
         echo "Installing packages: ${PKGS[*]}"
