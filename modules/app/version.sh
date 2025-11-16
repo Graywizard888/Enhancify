@@ -26,7 +26,7 @@ scrapeVersionsList() {
                     version: $CHILDREN[1].children[0].children[1].text,
                     info: $CHILDREN[0].children[0].children[1].children[0].children[0].children[0]
                 } |
-                    select(.version != null and .version != "" and .info != null) |
+                    select(.version != null and .info != null) |
                 {
                     version: .version,
                     tag: (
