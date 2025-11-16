@@ -1,6 +1,6 @@
 #!/bin/bash
 auto_update() {
-    local target_pkgs=("wget" "ncurses-utils" "dialog" "pup" "jq" "aria2" "unzip" "zip" "apksigner" "dnsutils")
+    local target_pkgs=("wget" "ncurses-utils" "dialog" "pup" "jq" "aria2" "unzip" "zip" "apksigner")
 
     notify info "Starting dependency packages versions check ..\nThis process May Take Some Time..."
     pkg update >/dev/null 2>&1
