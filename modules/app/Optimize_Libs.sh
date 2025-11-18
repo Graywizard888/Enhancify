@@ -20,8 +20,7 @@ Optimize_Libs() {
     LIBS_IN_APK=$("$AAPT2_PATH" dump badging "$APP_PATH" 2>/dev/null | grep "^native-code:" | sed "s/native-code: //g" | tr -d "'" | tr ' ' '\n' | sort -u)
 
     if [[ -z "$LIBS_IN_APK" ]]; then
-        notify info "No native libraries found!\nOperation aborted !"
-        sleep 1
+        notify msg "No native libraries found!\nOperation aborted !"
         return 1
     fi
 
@@ -30,7 +29,7 @@ Optimize_Libs() {
 
     if [[ $ARCH_COUNT -eq 1 ]] && echo "$LIBS_IN_APK" | grep -q "^${ARCH}$"; then
         notify info "Only device architecture ($ARCH) found.\nApk Arch Already In Optimal State!\nSkipping..."
-        sleep 2
+        sleep 1
         return 0
     fi
 
