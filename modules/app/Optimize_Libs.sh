@@ -29,7 +29,7 @@ Optimize_Libs() {
 
     if [[ $ARCH_COUNT -eq 1 ]] && echo "$LIBS_IN_APK" | grep -q "^${ARCH}$"; then
         notify info "Only device architecture ($ARCH) found.\nApk Arch Already In Optimal State!\nSkipping..."
-        sleep 1
+        sleep 2
         return 0
     fi
 
