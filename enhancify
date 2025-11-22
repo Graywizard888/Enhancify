@@ -75,14 +75,14 @@ fixLibraryIssues() {
                 apt update -y &> /dev/null
             fi
             
-            echo "Step 2: Installing missing library..."
-            pkg install libuuid -y &> /dev/null
+            echo "Step 2: Fixing missing library..."
+            pkg install libandroid-support libuuid libandroid-posix-semaphore -y &> /dev/null
             
             echo "Step 3: Fixing broken dependencies..."
             apt --fix-broken install -y &> /dev/null
             
             echo "Step 4: Reinstalling wget..."
-            pkg reinstall wget -y &> /dev/null
+            pkg install wget -y &> /dev/null
             
             echo "Step 5: Upgrading packages..."
             pkg upgrade -y &> /dev/null
