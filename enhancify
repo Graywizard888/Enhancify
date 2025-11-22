@@ -92,7 +92,7 @@ fixLibraryIssues() {
                 return 0
             else
                 echo "⚠ Unable to fix library issue automatically"
-                echo "switching to "Curl" download mechanism..."
+                echo "switching to (Curl) download mechanism..."
                 return 0
             fi
         fi
