@@ -10,8 +10,7 @@ jobs:
   feature-request-reply:
     if: |
       github.event_name == 'issues' &&
-      contains(github.event.issue.labels.*.name, 'enhancement') &&
-      contains(github.event.issue.labels.*.name, 'needs-review')
+      contains(github.event.issue.labels.*.name, 'enhancement')
     runs-on: ubuntu-latest
     steps:
       - name: Reply to Feature Request
@@ -36,8 +35,7 @@ jobs:
   bug-report-reply:
     if: |
       github.event_name == 'issues' &&
-      contains(github.event.issue.labels.*.name, 'bug') &&
-      contains(github.event.issue.labels.*.name, 'needs-triage')
+      contains(github.event.issue.labels.*.name, 'bug')
     runs-on: ubuntu-latest
     steps:
       - name: Reply to Bug Report
