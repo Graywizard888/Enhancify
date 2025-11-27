@@ -1,4 +1,4 @@
- #!/usr/bin/bash
+#!/data/data/com.termux/files/usr/bin/bash
 
 SRC="$HOME/Enhancify"
 
@@ -343,7 +343,7 @@ echo ""
 print_info "Launching Enhancify..."
 echo ""
 
-Sleep 1
+sleep 1
 
 bash main.sh "$ROOT_ACCESS" "$RISH_ACCESS"
 EXIT_CODE=$?
