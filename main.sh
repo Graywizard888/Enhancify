@@ -55,7 +55,7 @@ main() {
                 arsclib
                 ;;
             10)
-                unmount
+                umountApp
                 ;;
         esac
     done
