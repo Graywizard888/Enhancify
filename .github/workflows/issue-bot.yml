@@ -22,7 +22,7 @@ jobs:
         with:
           issue-number: ${{ github.event.issue.number }}
           body: |
-            ## 🚀 Feature Request Detected !!
+            ## 🔬 Feature Request Detected !!
             
             Thanks for the feature request!
             
@@ -47,7 +47,7 @@ jobs:
         with:
           issue-number: ${{ github.event.issue.number }}
           body: |
-            ## 🐛 Bug Report Detected !!
+            ## 🐞 Bug Report Detected !!
             
             Thanks for the bug report!
             
