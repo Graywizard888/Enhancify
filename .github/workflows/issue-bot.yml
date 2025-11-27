@@ -2,7 +2,7 @@ name: Issue Auto Reply Bot
 
 on:
   issues:
-    types: [labeled]
+    types: [opened, labeled]
   schedule:
     - cron: '0 0 * * 0'
 
