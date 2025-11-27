@@ -1,0 +1,131 @@
+name: Issue Auto Reply Bot
+
+on:
+  issues:
+    types: [labeled]
+  schedule:
+    - cron: '0 0 * * 0'
+
+jobs:
+  feature-request-reply:
+    if: |
+      github.event_name == 'issues' &&
+      contains(github.event.issue.labels.*.name, 'enhancement') &&
+      contains(github.event.issue.labels.*.name, 'needs-review')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reply to Feature Request
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            ## 馃殌 Feature Request Detected !!
+            
+            Thanks for the feature request!
+            
+            The maintainer **@${{ github.repository_owner }}** is not available for now but will respond shortly...
+            
+            ### 鉁� Make sure you filled everything required info:
+            - [ ] Clear description of the feature
+            - [ ] Use case / Why you need this
+            - [ ] Possible implementation ideas (optional)
+            
+            ---
+            *This is an automated response*
+
+  bug-report-reply:
+    if: |
+      github.event_name == 'issues' &&
+      contains(github.event.issue.labels.*.name, 'bug') &&
+      contains(github.event.issue.labels.*.name, 'needs-triage')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reply to Bug Report
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            ## 馃悰 Bug Report Detected !!
+            
+            Thanks for the bug report!
+            
+            The maintainer **@${{ github.repository_owner }}** is not available for now but will respond shortly...
+            
+            ### 鉁� Make sure you filled everything required info:
+            - [ ] Steps to reproduce
+            - [ ] Environment (OS, version, etc.)
+            - [ ] Screenshots (if applicable)
+            
+            ---
+            *This is an automated response*
+
+  stale-issue-reminder:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check and Comment on Old Issues
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            
+            // Get all open issues
+            const issues = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: 'open',
+              per_page: 100
+            });
+            
+            const fiveDaysAgo = new Date();
+            fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
+            
+            for (const issue of issues.data) {
+              // Skip pull requests
+              if (issue.pull_request) continue;
+              
+              const createdAt = new Date(issue.created_at);
+              
+              // Check if issue is older than 5 days
+              if (createdAt < fiveDaysAgo) {
+                
+                // Check if we already posted this message this week
+                const comments = await github.rest.issues.listComments({
+                  owner,
+                  repo,
+                  issue_number: issue.number,
+                  per_page: 10
+                });
+                
+                const oneWeekAgo = new Date();
+                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+                
+                const alreadyNotified = comments.data.some(comment => {
+                  const commentDate = new Date(comment.created_at);
+                  return comment.body.includes('Looking Like This Issue Will Take Longer') &&
+                         commentDate > oneWeekAgo;
+                });
+                
+                if (!alreadyNotified) {
+                  await github.rest.issues.createComment({
+                    owner,
+                    repo,
+                    issue_number: issue.number,
+                    body: `## 鈴� Looking Like This Issue Will Take Longer to Resolve - Stay Tuned !!
+                    
+            We appreciate your patience! This issue has been open for a while.
+            
+            **@${owner}**  are working on addressing open issues.
+            
+            If you have any additional information that might help, please add it here.
+            
+            ---
+            *This is an automated weekly reminder*`
+                  });
+                  
+                  console.log(`Commented on issue #${issue.number}`);
+                }
+              }
+            }
