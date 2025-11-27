@@ -6,6 +6,10 @@ on:
   schedule:
     - cron: '0 0 * * 0'
 
+permissions:
+  issues: write
+  contents: read
+
 jobs:
   feature-request-reply:
     if: |
@@ -18,13 +22,13 @@ jobs:
         with:
           issue-number: ${{ github.event.issue.number }}
           body: |
-            ## 馃殌 Feature Request Detected !!
+            ## 🚀 Feature Request Detected !!
             
             Thanks for the feature request!
             
             The maintainer **@${{ github.repository_owner }}** is not available for now but will respond shortly...
             
-            ### 鉁� Make sure you filled everything required info:
+            ### ✅ Make sure you filled everything required info:
             - [ ] Clear description of the feature
             - [ ] Use case / Why you need this
             - [ ] Possible implementation ideas (optional)
@@ -43,13 +47,13 @@ jobs:
         with:
           issue-number: ${{ github.event.issue.number }}
           body: |
-            ## 馃悰 Bug Report Detected !!
+            ## 🐛 Bug Report Detected !!
             
             Thanks for the bug report!
             
             The maintainer **@${{ github.repository_owner }}** is not available for now but will respond shortly...
             
-            ### 鉁� Make sure you filled everything required info:
+            ### ✅ Make sure you filled everything required info:
             - [ ] Steps to reproduce
             - [ ] Environment (OS, version, etc.)
             - [ ] Screenshots (if applicable)
@@ -69,7 +73,6 @@ jobs:
             const owner = context.repo.owner;
             const repo = context.repo.repo;
             
-            // Get all open issues
             const issues = await github.rest.issues.listForRepo({
               owner,
               repo,
@@ -81,15 +84,11 @@ jobs:
             fiveDaysAgo.setDate(fiveDaysAgo.getDate() - 5);
             
             for (const issue of issues.data) {
-              // Skip pull requests
               if (issue.pull_request) continue;
               
               const createdAt = new Date(issue.created_at);
               
-              // Check if issue is older than 5 days
               if (createdAt < fiveDaysAgo) {
-                
-                // Check if we already posted this message this week
                 const comments = await github.rest.issues.listComments({
                   owner,
                   repo,
@@ -111,11 +110,11 @@ jobs:
                     owner,
                     repo,
                     issue_number: issue.number,
-                    body: `## 鈴� Looking Like This Issue Will Take Longer to Resolve - Stay Tuned !!
+                    body: `## ⏳ Looking Like This Issue Will Take Longer to Resolve - Stay Tuned !!
                     
             We appreciate your patience! This issue has been open for a while.
             
-            **@${owner}**  are working on addressing open issues.
+            **@${owner}** is working on addressing open issues.
             
             If you have any additional information that might help, please add it here.
             
