@@ -60,7 +60,7 @@ Optimize_Libs() {
     notify info "Building apk..."
     (
         cd "$TEMP_DIR" || exit 1
-        if ! zip -qr -0 -X ../temp.apk ./*; then
+        if ! zip -qr -4 -X ../temp.apk ./*; then
             notify msg "Failed to repackage APK!\nOperation aborted."
             cd .. && rm -rf "$TEMP_DIR" "temp.apk"
             exit 2
