@@ -4,7 +4,7 @@ main() {
 
     setEnv SOURCE "Anddea" init .config
     setEnv DARK_THEME "off" init .config
-    setEnv PREFER_SPLIT_APK "on" init .config
+    setEnv OPTIMIZE_LIBS "on" init .config
     setEnv LAUNCH_APP_AFTER_MOUNT "on" init .config
     setEnv ALLOW_APP_VERSION_DOWNGRADE "off" init .config
     source .config
