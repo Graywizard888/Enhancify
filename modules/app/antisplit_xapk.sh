@@ -3,7 +3,6 @@ antisplit_xapk() {
     local lang_names=() lang_name code msg attempt
     declare -A SPLIT_MAP
 
-    # Dependency check
     [[ ! -f "bin/APKEditor.jar" ]] && {
         notify msg "APKEditor missing! Install first"
         return 1
@@ -17,7 +16,6 @@ antisplit_xapk() {
 
 sleep 1
 
-    # Retry unzip (up to 3 attempts)
     for attempt in {1..3}; do
         notify info "Extracting package... [$((attempt*15))%]"
         if unzip -qqo "apps/$APP_NAME/$APP_VER.xapk" -d "$TEMP_DIR"; then
@@ -30,7 +28,6 @@ sleep 1
         sleep $((attempt * 2))
     done
 
-    # Stream-process manifest
     MANIFEST="$TEMP_DIR/manifest.json"
     [[ ! -f "$MANIFEST" ]] && {
         notify msg "manifest.json missing in XAPK!"
@@ -38,7 +35,6 @@ sleep 1
         return 1
     }
 
-    # Single-pass JSON parsing
     eval "$(jq -r '.split_apks[] | "SPLIT_MAP[\(.id)]=\"\(.file)\""' "$MANIFEST")"
     
     BASE_APK="${SPLIT_MAP[base]}"
@@ -48,7 +44,6 @@ sleep 1
         return 1
     }
 
-    # Architecture handling with fallback
     local ARCH_SPLIT="config.${ARCH//-/_}"
     if [[ ! -v SPLIT_MAP[$ARCH_SPLIT] ]]; then
         [[ "$ARCH" == "arm64-v8a" ]] && ARCH_SPLIT="config.armeabi_v7a"
@@ -59,12 +54,10 @@ sleep 1
         }
     fi
 
-    # Smart DPI selection
     local DPI_BUCKET=$(get_dpi_bucket)
     local DPI_SPLIT="config.$DPI_BUCKET"
     [[ ! -v SPLIT_MAP[$DPI_SPLIT] ]] && DPI_SPLIT=""
 
-    # Language selection
     local LANG_OPTIONS=() LANG_SELECTED
     for lang_id in "${!SPLIT_MAP[@]}"; do
         [[ "$lang_id" =~ ^config\.[a-z]{2}$ ]] || continue
@@ -85,7 +78,6 @@ sleep 1
         return 1
     }
 
-    # Language summary
     if [[ -z "$LANG_SELECTED" ]]; then
         notify info "Using default base language\nMay cause text issues in some regions"
     else
@@ -111,12 +103,10 @@ sleep 1
 
     fi
 
-    # Prepare merge directory
     MERGE_DIR="$APP_DIR/merge"
     mkdir -p "$MERGE_DIR"
     notify info "Preparing files... [60%]"
 
-    # Copy required splits
     cp "$TEMP_DIR/${SPLIT_MAP[base]}" "$MERGE_DIR/base.apk"
     [[ -n "$DPI_SPLIT" ]] && cp "$TEMP_DIR/${SPLIT_MAP[$DPI_SPLIT]}" "$MERGE_DIR/"
     cp "$TEMP_DIR/${SPLIT_MAP[$ARCH_SPLIT]}" "$MERGE_DIR/"
@@ -124,7 +114,6 @@ sleep 1
         cp "$TEMP_DIR/${SPLIT_MAP[$lang]}" "$MERGE_DIR/"
     done
 
-    # Merge with retries
     for attempt in {1..2}; do
         notify info "Building APK... [$((60 + attempt*15))%]"
         if java -jar bin/APKEditor.jar m -i "$MERGE_DIR" -o "apps/$APP_NAME/$APP_VER.apk" &>/dev/null; then
@@ -137,7 +126,6 @@ sleep 1
         
     done
 
-    # Cleanup
     notify info "Finalizing... [90%]"
     rm -rf "$TEMP_DIR" "$MERGE_DIR"
     rm "apps/$APP_NAME/$APP_VER.xapk" 2>/dev/null
@@ -151,7 +139,6 @@ sleep 2
 
 }
 
-# Improved DPI bucket selection with fallback
 get_dpi_bucket() {
     local density=$(getprop ro.sf.lcd_density)
     declare -A buckets=(
@@ -171,7 +158,6 @@ get_dpi_bucket() {
     echo "$closest"
 }
 
-# Cached language names for performance
 get_language_name() {
     local code=$1
     declare -gA LANG_CACHE
