@@ -1,0 +1,357 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+SRC="$HOME/Enhancify"
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[1;37m'
+BOLD='\033[1m'
+RESET='\033[0m'
+
+SUCCESS="${GREEN}✓${RESET}"
+ERROR="${RED}✗${RESET}"
+WARNING="${YELLOW}⚠${RESET}"
+INFO="${CYAN}ℹ${RESET}"
+ARROW="${MAGENTA}➜${RESET}"
+
+print_success() {
+    echo -e "${SUCCESS} ${GREEN}$1${RESET}"
+}
+
+print_error() {
+    echo -e "${ERROR} ${RED}$1${RESET}"
+}
+
+print_warning() {
+    echo -e "${WARNING} ${YELLOW}$1${RESET}"
+}
+
+print_info() {
+    echo -e "${INFO} ${CYAN}$1${RESET}"
+}
+
+print_step() {
+    echo -e "${ARROW} ${WHITE}$1${RESET}"
+}
+
+print_header() {
+    echo -e "\n${BOLD}${MAGENTA}══════════════════════════════════════${RESET}"
+    echo -e "${BOLD}${WHITE}  $1${RESET}"
+    echo -e "${BOLD}${MAGENTA}══════════════════════════════════════${RESET}\n"
+}
+
+HELP="${BOLD}${CYAN}enhancify${RESET}
+
+${WHITE}Usage:${RESET} ${GREEN}enhancify${RESET} ${YELLOW}[OPTION]${RESET}
+
+${WHITE}Options:${RESET}
+  ${YELLOW}-f${RESET}  Force re-install Enhancify
+  ${YELLOW}-u${RESET}  Disable Update Check
+  ${YELLOW}-r${RESET}  Disable Root access
+  ${YELLOW}-R${RESET}  Disable Rish access
+  ${YELLOW}-v${RESET}  Print current version
+  ${YELLOW}-h${RESET}  Print help statement"
+
+while getopts ":furRvh" OPT 2> /dev/null; do
+    case $OPT in
+        f)
+            rm "$SRC/.info" &> /dev/null
+            ;;
+        u)
+            INTERNET_ACCESS=false
+            ;;
+        r)
+            ROOT_ACCESS=false
+            ;;
+        R)
+            RISH_ACCESS=false
+            ;;
+        v)
+            if [ -e "$SRC" ]; then
+                source "$SRC/.info"
+                echo -e "${GREEN}Version: ${WHITE}${BOLD}$VERSION${RESET}"
+            else
+                print_error "Enhancify not installed !!"
+            fi
+            exit
+            ;;
+        h)
+            echo -e "$HELP"
+            exit
+            ;;
+        ?)
+            print_error "Invalid option specified: ${YELLOW}-${OPTARG}${RESET}"
+            echo -e "$HELP"
+            exit 1
+            ;;
+    esac
+done
+
+terminate() {
+    killall -9 curl &> /dev/null
+    killall -9 wget &> /dev/null
+    clear
+    print_error "Script terminated !!"
+    exit 1
+}
+trap terminate SIGTERM SIGINT SIGABRT
+
+fixLibraryIssues() {
+    print_info "Checking for library issues..."
+    
+    if ! wget --version &> /dev/null; then
+        local ERROR_MSG=$(wget --version 2>&1)
+        
+        if grep -q "libandroid-posix-semaphore.so" <<< "$ERROR_MSG" || \
+           grep -q "library.*not found" <<< "$ERROR_MSG"; then
+            
+            print_error "Critical: Detected library issue"
+            print_info "Attempting to fix..."
+            
+            print_step "Step 1: Updating packages..."
+            if pkg update -y 2>&1 | grep -q "libandroid-posix-semaphore.so"; then
+                apt update -y &> /dev/null
+            fi
+            
+            print_step "Step 2: Fixing missing library..."
+            pkg install libandroid-support libuuid libandroid-posix-semaphore -y &> /dev/null
+            
+            print_step "Step 3: Fixing broken dependencies..."
+            apt --fix-broken install -y &> /dev/null
+            
+            print_step "Step 4: Reinstalling wget..."
+            pkg install wget -y &> /dev/null
+            
+            print_step "Step 5: Upgrading packages..."
+            pkg upgrade -y &> /dev/null
+            
+            if wget --version &> /dev/null; then
+                print_success "Library issue fixed successfully!"
+                return 0
+            else
+                print_warning "Unable to fix library issue automatically"
+                print_info "Switching to (Curl) download mechanism..."
+                return 0
+            fi
+        fi
+    fi
+    
+    print_success "No library issues detected"
+    return 0
+}
+
+downloadFile() {
+    local URL="$1"
+    local OUTPUT="$2"
+    local SIZE="$3"
+    
+    if wget --version &> /dev/null; then
+        wget -q --show-progress "$URL" -O "$OUTPUT"
+        return $?
+    fi
+    
+    print_warning "Using curl as fallback..."
+    pkg install curl -y
+    curl -sL --progress-bar "$URL" -o "$OUTPUT"
+    return $?
+}
+
+installDependencies() {
+    local BINS BIN CTR RESPONSE
+    
+    print_header "Installing Dependencies"
+
+    if ! fixLibraryIssues; then
+        print_warning "Library issues failed to solve, using \"Curl\" mechanism..."
+    fi
+
+    [ -e "$HOME/storage" ] || termux-setup-storage
+
+    BINS=$(ls "$PREFIX/bin")
+    
+    if ! grep -q java <<< "$BINS"; then
+        print_info "Installing Java..."
+        if pkg install openjdk-21 -y 2>&1 | grep -q "libandroid-posix-semaphore.so"; then
+            fixLibraryIssues
+            pkg install openjdk-21 -y
+        elif pkg install openjdk-21 -y; then
+            print_success "Using openjdk-21"
+        else
+            print_warning "openjdk-21 not available, falling back to openjdk-17"
+            pkg install openjdk-17 -y || return 1
+        fi
+    fi
+    
+    grep -q wget <<< "$BINS" || PKGS+=("wget")
+    grep -q tput <<< "$BINS" || PKGS+=("ncurses-utils")
+    grep -q dialog <<< "$BINS" || PKGS+=("dialog")
+    grep -q pup <<< "$BINS" || PKGS+=("pup")
+    grep -q jq <<< "$BINS" || PKGS+=("jq")
+    grep -q aria2c <<< "$BINS" || PKGS+=("aria2")
+    grep -q '^unzip$' <<< "$BINS" || PKGS+=("unzip")
+    grep -q '^zip$' <<< "$BINS" || PKGS+=("zip")
+    grep -q apksigner <<< "$BINS" || PKGS+=("apksigner")
+
+    if [ "${#PKGS[@]}" -ne 0 ]; then
+        print_info "Installing packages: ${YELLOW}${PKGS[*]}${RESET}"
+        
+        if ! pkg update 2>&1; then
+            fixLibraryIssues
+            pkg update || return 1
+        fi
+        
+        if ! yes | pkg install "${PKGS[@]}" 2>&1; then
+            fixLibraryIssues
+            yes | pkg install "${PKGS[@]}" || return 1
+        fi
+    fi
+
+    sed -i '/allow-external-apps/s/# //' "$HOME/.termux/termux.properties" 2>/dev/null
+
+    [ -e "$SRC/bin" ] || mkdir -p "$SRC/bin"
+
+    AAPT2="$SRC/bin/aapt2"
+    APK_EDITOR="$SRC/bin/APKEditor.jar"
+
+    CTR=0 && while [ ! -e "$AAPT2" ]; do
+        [ $CTR -gt 2 ] && return 1
+        echo ""
+        print_info "Downloading aapt2..."
+        echo ""
+        readarray -t RESPONSE < <(curl -s "https://api.github.com/repos/Graywizard888/Custom-Enhancify-aapt2-binary/releases/latest" | jq -r --arg ARCH "$(getprop ro.product.cpu.abi)" '.assets[] | if (.name | test($ARCH)) then (.browser_download_url, .size) else empty end' 2> /dev/null)
+        [ "${#RESPONSE[@]}" -eq 0 ] && return 1
+        
+        downloadFile "${RESPONSE[0]}" "$AAPT2"
+        chmod +x "$AAPT2"
+        
+        if [ "${RESPONSE[1]}" == "$(stat -c %s "$AAPT2" 2> /dev/null)" ]; then
+            print_success "aapt2 downloaded successfully"
+            break
+        else
+            rm "$AAPT2"
+            print_warning "Download verification failed, retrying..."
+        fi
+        ((CTR++))
+    done
+
+    CTR=0 && while [ ! -e "$APK_EDITOR" ]; do
+        [ $CTR -gt 2 ] && return 1
+        echo ""
+        print_info "Downloading APKEditor..."
+        echo ""
+        readarray -t RESPONSE < <(curl -s "https://api.github.com/repos/REAndroid/APKEditor/releases/latest" | jq -r '.assets[0] | .browser_download_url, .size' 2> /dev/null)
+        [ "${#RESPONSE[@]}" -eq 0 ] && return 1
+        
+        downloadFile "${RESPONSE[0]}" "$APK_EDITOR"
+        
+        if [ "${RESPONSE[1]}" == "$(stat -c %s "$APK_EDITOR" 2> /dev/null)" ]; then
+            print_success "APKEditor downloaded successfully"
+            break
+        else
+            rm "$APK_EDITOR"
+            print_warning "Download verification failed, retrying..."
+        fi
+        ((CTR++))
+    done
+
+    print_success "All dependencies installed!"
+    return 0
+}
+
+fetchSrc() {
+    [ -e "$SRC/.info" ] && source "$SRC/.info"
+
+    [ "$INTERNET_ACCESS" == false ] && return
+
+    ping -c 1 github.com &> /dev/null || return
+
+    print_header "Checking for Updates"
+
+    print_info "Checking latest release..."
+
+    TAG=$(curl -s 'https://api.github.com/repos/Graywizard888/Enhancify/releases/latest' 2> /dev/null | jq -r '.tag_name')
+
+    if [ "$TAG" == "$VERSION" ]; then
+        print_success "You're running the latest version ${GREEN}($VERSION)${RESET}"
+        return
+    fi
+
+    echo -e "${CYAN}╭─────────────────────────────────────────╮${RESET}"
+    echo -e "${CYAN}│${RESET}  ${GREEN}🎉 Enhancify ${BOLD}$TAG${RESET}${GREEN} is available!${RESET}      ${CYAN}│${RESET}"
+    echo -e "${CYAN}╰─────────────────────────────────────────╯${RESET}"
+
+    print_info "Installing update..."
+
+    downloadFile "https://github.com/Graywizard888/Enhancify/archive/refs/tags/$TAG.zip" "$TAG.zip"
+    
+    if [ -e "$TAG.zip" ]; then
+        unzip -qo "$TAG.zip"
+        rm -rf "$TAG.zip"
+        for CONTENT in Enhancify-*/* Enhancify-*/.*; do
+            rm -rf "${SRC:?}/$(basename "$CONTENT")"
+            mv "$CONTENT" "$SRC/"
+        done
+        rm -rf Enhancify-* &> /dev/null
+        cp -f "$SRC/enhancify" "$PREFIX/bin/enhancify"
+        chmod +x "$PREFIX/bin/enhancify"
+        
+        echo ""
+        print_success "Enhancify ${BOLD}$TAG${RESET}${GREEN} installed successfully!"
+        print_info "Launching in 2 seconds..."
+        sleep 2
+        enhancify
+        exit
+    else
+        print_error "Unable to install Enhancify $TAG !!"
+        print_warning "Please try again with proper Internet"
+        exit 1
+    fi
+}
+
+clear
+
+echo -e "${BOLD}${MAGENTA}✦ ${CYAN}E N H A N C I F Y${RESET} ${BOLD}${MAGENTA}✦${RESET}"
+echo ""
+
+if ! installDependencies; then
+    print_error "Dependencies not installed !!"
+    print_warning "Run again with stable internet connection."
+    exit 1
+fi
+
+fetchSrc
+
+
+if [ "$ROOT_ACCESS" != false ] && su -c 'exit' &> /dev/null; then
+    ROOT_ACCESS=true
+    RISH_ACCESS=false
+elif [ "$RISH_ACCESS" != false ] && rish -c 'exit' &> /dev/null; then
+    ROOT_ACCESS=false
+    RISH_ACCESS=true
+else
+    ROOT_ACCESS=false
+    RISH_ACCESS=false
+fi
+
+cd "$SRC" &> /dev/null || terminate
+
+echo ""
+print_info "Launching Enhancify..."
+echo ""
+
+sleep 1
+
+bash main.sh "$ROOT_ACCESS" "$RISH_ACCESS"
+EXIT_CODE=$?
+
+if [ "$EXIT_CODE" -eq 0 ]; then
+    print_success "Enhancify exited successfully"
+else
+    print_error "Enhancify exited with code: $EXIT_CODE"
+fi
+
+exit "$EXIT_CODE"
