@@ -67,6 +67,7 @@
 <li> Custom Github Token Support (5000/Hr) Rate Limit </li>
 <li>Rish Apk Installation Support</li>
 <li>Spoof Installation Location To Play Store (Rish Mode Only)</li>
+<li>Dex Optmizer That Optimizes apps by triggering app optimization Based On new Install(quicken profile) and update app (speed profile) (Rish Mode Only)</li>
 </div>
 </ul>
 
