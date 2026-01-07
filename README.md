@@ -16,22 +16,16 @@
 
 ---
 <div align="center">
-  <table style="border-collapse: collapse;">
+  <table style="border-collapse: collapse; margin: 0 auto;">
     <tr>
-      <td colspan="2" style="text-align: center; border-bottom: 4px solid #00ff00">
-        <h3>Supported on</h3>
+      <td style="text-align: center; border-bottom: 4px solid #00ff00">
+        <h3>Recommended on</h3>
       </td>
     </tr>
     <tr>
       <td style="text-align: center; padding: 20px">
-        <a href="https://github.com/termux/termux-app">
-          <img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/Termux.png" width="80px">
-        </a>
-        <div style="margin-top: 8px; font-weight: bold;">Termux</div>
-      </td>
-      <td style="text-align: center; padding: 20px">
         <a href="https://github.com/Graywizard888/Terminal_EX">
-          <img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/Termux_monet.png" width="80px">
+          <img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/Termux_monet.png" width="80px" style= "display:block; margin: 0 auto;">
         </a>
         <div style="margin-top: 8px; font-weight: bold;">Terminal Ex</div>
       </td>
