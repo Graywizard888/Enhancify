@@ -16,16 +16,16 @@
 
 ---
 <div align="center">
-  <table style="border-collapse: collapse; margin: 0 auto;">
+  <table style="border-collapse: collapse; margin: 0 auto; width: 100%;">
     <tr>
       <td style="text-align: center; border-bottom: 4px solid #00ff00">
         <h3>Recommended on</h3>
       </td>
     </tr>
     <tr>
-      <td style="text-align: center; padding: 20px">
+      <td align="center" style="text-align: center; padding: 20px;">
         <a href="https://github.com/Graywizard888/Terminal_EX">
-          <img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/Termux_monet.png" width="80px" style= "display:block; margin: 0 auto;">
+          <img src="https://raw.githubusercontent.com/Graywizard888/Enhancify/main/.Icons/Termux_monet.png" width="80px" alt="Terminal Ex">
         </a>
         <div style="margin-top: 8px; font-weight: bold;">Terminal Ex</div>
       </td>
