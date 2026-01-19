@@ -15,7 +15,7 @@ updates:
       - "dependencies"
       - "github-actions"
     reviewers:
-      - "${{ github.repository_owner }}"
+      - "Graywizard888"
     open-pull-requests-limit: 5
     commit-message:
       prefix: "chore"
