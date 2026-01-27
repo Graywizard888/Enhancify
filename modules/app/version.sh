@@ -231,7 +231,6 @@ chooseVersion() {
             cache_metadata_manager "$APKMIRROR_APP_NAME" "clear"
             unset VERSIONS_LIST
             notify info "Refreshing versions list for $APP_NAME..."
-            sleep 1
             scrapeVersionsList || return 1
             chooseVersion
             return $?
