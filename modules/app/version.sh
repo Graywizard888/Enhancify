@@ -168,7 +168,6 @@ chooseVersion() {
                 return 1
             fi
             notify info "Please Wait !!\nScraping versions list for $APP_NAME from apkmirror.com..."
-            sleep 1
             scrapeVersionsList || return 1
         fi
     fi
