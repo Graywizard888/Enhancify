@@ -1,0 +1,623 @@
+name: "📦 Download bcprov & apksigner After Merge"
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+  workflow_dispatch:
+    inputs:
+      bcprov_version:
+        description: 'bcprov version (e.g. 1.83)'
+        required: true
+      build_tools_version:
+        description: 'build-tools version (e.g. 35.0.1)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  download-and-commit:
+    if: >
+      (github.event_name == 'workflow_dispatch')
+      ||
+      (
+        github.event_name == 'pull_request'
+        && github.event.pull_request.merged == true
+        && startsWith(github.event.pull_request.head.ref, 'update/deps-')
+      )
+    runs-on: ubuntu-latest
+    env:
+      UTILS_DIR: utils
+      STAGING_DIR: /tmp/staging
+
+    steps:
+
+      - name: "🔒 Layer 4: Verify label"
+        if: github.event_name == 'pull_request'
+        run: |
+          LABELS='${{ toJSON(github.event.pull_request.labels.*.name) }}'
+          if echo "$LABELS" | jq -e '. | index("bcprov-auto-update")' > /dev/null 2>&1; then
+            echo "✅ Label: bcprov-auto-update"
+          else
+            echo "❌ Missing label"
+            exit 1
+          fi
+
+      - name: "🔒 Layer 5: Verify author"
+        if: github.event_name == 'pull_request'
+        run: |
+          AUTHOR="${{ github.event.pull_request.user.login }}"
+          if [ "$AUTHOR" == "github-actions[bot]" ]; then
+            echo "✅ Author: $AUTHOR"
+          else
+            echo "❌ Unexpected author: $AUTHOR"
+            exit 1
+          fi
+
+      - name: "✅ All 5 guards passed"
+        run: |
+          echo "══════════════════════════════════════"
+          echo "  ✅ ALL SECURITY LAYERS PASSED"
+          echo "══════════════════════════════════════"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq aria2 jq xmlstarlet unzip
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Create staging directory
+        run: mkdir -p "$STAGING_DIR"
+
+      - name: Determine versions
+        id: versions
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            BC_VER="${{ github.event.inputs.bcprov_version }}"
+            BT_VER="${{ github.event.inputs.build_tools_version }}"
+          else
+            BC_VER=$(jq -r '.bcprov.version' "${UTILS_DIR}/versions.json")
+            BT_VER=$(jq -r '.build_tools.version' "${UTILS_DIR}/versions.json")
+          fi
+
+          if [[ ! "$BC_VER" =~ ^[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid bcprov version: $BC_VER"; exit 1
+          fi
+          if [[ ! "$BT_VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "❌ Invalid build-tools version: $BT_VER"; exit 1
+          fi
+
+          echo "bcprov=$BC_VER" >> "$GITHUB_OUTPUT"
+          echo "build_tools=$BT_VER" >> "$GITHUB_OUTPUT"
+
+          echo "══════════════════════════════════════"
+          echo "  bcprov      : $BC_VER"
+          echo "  build-tools : $BT_VER"
+          echo "══════════════════════════════════════"
+
+      - name: Get source sizes
+        id: source_sizes
+        run: |
+          BC_VER="${{ steps.versions.outputs.bcprov }}"
+          BT_VER="${{ steps.versions.outputs.build_tools }}"
+
+          BC_URL="https://repo1.maven.org/maven2/org/bouncycastle/bcprov-jdk18on/${BC_VER}/bcprov-jdk18on-${BC_VER}.jar"
+
+          SDK_XML=$(curl -fsSL "https://dl.google.com/android/repository/repository2-3.xml")
+          BT_PATH="build-tools;${BT_VER}"
+
+          DL_FILE=$(echo "$SDK_XML" \
+            | xmlstarlet sel \
+                -N sdk="http://schemas.android.com/sdk/android/repo/repository2/03" \
+                -t -m "//sdk:remotePackage[@path='${BT_PATH}']//sdk:archive[sdk:host-os='linux']" \
+                -v ".//sdk:url" -n 2>/dev/null | head -1 || true)
+
+          [ -z "$DL_FILE" ] && DL_FILE="build-tools_r${BT_VER}-linux.zip"
+          BT_URL="https://dl.google.com/android/repository/${DL_FILE}"
+
+          echo "bt_url=$BT_URL" >> "$GITHUB_OUTPUT"
+
+          BC_SRC=$(curl -fsSLI "$BC_URL" | grep -i content-length | tail -1 | awk '{print $2}' | tr -d '\r')
+          BT_SRC=$(curl -fsSLI "$BT_URL" | grep -i content-length | tail -1 | awk '{print $2}' | tr -d '\r')
+
+          echo "bcprov=${BC_SRC:-0}" >> "$GITHUB_OUTPUT"
+          echo "build_tools=${BT_SRC:-0}" >> "$GITHUB_OUTPUT"
+
+          echo "  bcprov source      : ${BC_SRC:-unknown} bytes"
+          echo "  build-tools source : ${BT_SRC:-unknown} bytes"
+
+      - name: "⬇️ [1/2] Download build-tools & extract apksigner.jar → staging"
+        id: dl_apksigner
+        run: |
+          BT_VER="${{ steps.versions.outputs.build_tools }}"
+          DL_URL="${{ steps.source_sizes.outputs.bt_url }}"
+
+          echo "══════════════════════════════════════════════════"
+          echo "  STEP 1/2 : apksigner.jar"
+          echo "  Build-Tools : ${BT_VER}"
+          echo "  URL         : ${DL_URL}"
+          echo "  Dest        : ${STAGING_DIR}/apksigner.jar"
+          echo "══════════════════════════════════════════════════"
+
+          aria2c \
+            --dir="$STAGING_DIR" \
+            --out="build-tools.zip" \
+            --split=8 \
+            --min-split-size=5M \
+            --max-connection-per-server=5 \
+            --file-allocation=none \
+            --disk-cache=32M \
+            --enable-http-pipelining=true \
+            --connect-timeout=10 \
+            --timeout=60 \
+            --retry-wait=2 \
+            --max-tries=5 \
+            --auto-file-renaming=false \
+            --allow-overwrite=true \
+            --console-log-level=notice \
+            --summary-interval=10 \
+            --check-certificate=true \
+            --stream-piece-selector=geom \
+            "$DL_URL"
+
+          ZIP="$STAGING_DIR/build-tools.zip"
+
+          if [ ! -f "$ZIP" ]; then
+            echo "❌ Download FAILED"
+            exit 1
+          fi
+
+          ZIP_SIZE=$(stat -c%s "$ZIP")
+
+          SRC="${{ steps.source_sizes.outputs.build_tools }}"
+          echo ""
+          echo "  📏 ZIP Size Check:"
+          echo "     Source : ${SRC} bytes"
+          echo "     Got    : ${ZIP_SIZE} bytes"
+
+          if [ "$SRC" != "0" ] && [ "$SRC" != "$ZIP_SIZE" ]; then
+            echo "  ❌ SIZE MISMATCH"
+            rm -f "$ZIP"; exit 1
+          elif [ "$SRC" != "0" ]; then
+            echo "  ✅ Matches source"
+          fi
+          
+          ENTRY=$(unzip -l "$ZIP" | grep "lib/apksigner.jar" | head -1)
+          EXPECTED=$(echo "$ENTRY" | awk '{print $1}')
+
+          if [ -z "$EXPECTED" ] || [ "$EXPECTED" == "0" ]; then
+            echo "  ❌ apksigner.jar NOT in ZIP"
+            rm -f "$ZIP"; exit 1
+          fi
+
+          unzip -jo "$ZIP" "*/lib/apksigner.jar" -d "$STAGING_DIR" 2>/dev/null
+
+          AK="$STAGING_DIR/apksigner.jar"
+
+          if [ ! -f "$AK" ]; then
+            echo "  ❌ Extraction failed"
+            rm -f "$ZIP"; exit 1
+          fi
+
+          ACTUAL=$(stat -c%s "$AK")
+
+          echo ""
+          echo "  📏 Extraction Size Check:"
+          echo "     ZIP listing : ${EXPECTED} bytes"
+          echo "     Extracted   : ${ACTUAL} bytes"
+
+          if [ "$EXPECTED" != "$ACTUAL" ]; then
+            echo "  ❌ EXTRACTION SIZE MISMATCH"
+            rm -f "$ZIP" "$AK"; exit 1
+          fi
+          echo "  ✅ Matches ZIP listing"
+
+          if ! file "$AK" | grep -qi "java archive\|zip"; then
+            echo "  ❌ Not a valid JAR"
+            rm -f "$ZIP" "$AK"; exit 1
+          fi
+
+          AK_VER=$(java -jar "$AK" version 2>/dev/null || echo "unknown")
+          SHA256=$(sha256sum "$AK" | awk '{print $1}')
+
+          echo ""
+          echo "  ✅ apksigner.jar STAGED"
+          echo "     Version : $AK_VER"
+          echo "     Size    : $(numfmt --to=iec-i --suffix=B $ACTUAL)"
+          echo "     SHA-256 : $SHA256"
+
+          echo "version=$AK_VER" >> "$GITHUB_OUTPUT"
+          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
+          echo "size=$ACTUAL" >> "$GITHUB_OUTPUT"
+
+          rm -f "$ZIP"
+
+      - name: "⬇️ [2/2] Download bcprov JAR → staging"
+        id: dl_bcprov
+        run: |
+          VERSION="${{ steps.versions.outputs.bcprov }}"
+          JAR_NAME="bcprov-jdk18on-${VERSION}.jar"
+
+          URL1="https://repo1.maven.org/maven2/org/bouncycastle/bcprov-jdk18on/${VERSION}/${JAR_NAME}"
+          URL2="https://repo.maven.apache.org/maven2/org/bouncycastle/bcprov-jdk18on/${VERSION}/${JAR_NAME}"
+
+          echo "══════════════════════════════════════════════════"
+          echo "  STEP 2/2 : bcprov"
+          echo "  Version  : ${VERSION}"
+          echo "  Dest     : ${STAGING_DIR}/${JAR_NAME}"
+          echo "══════════════════════════════════════════════════"
+
+          aria2c \
+            --dir="$STAGING_DIR" \
+            --out="${JAR_NAME}" \
+            --split=3 \
+            --min-split-size=2M \
+            --max-connection-per-server=3 \
+            --file-allocation=none \
+            --disk-cache=10M \
+            --enable-http-pipelining=true \
+            --connect-timeout=5 \
+            --timeout=15 \
+            --retry-wait=1 \
+            --max-tries=5 \
+            --auto-file-renaming=false \
+            --allow-overwrite=true \
+            --console-log-level=notice \
+            --check-certificate=true \
+            "${URL1}" "${URL2}"
+
+          FILE="$STAGING_DIR/${JAR_NAME}"
+
+          if [ ! -f "$FILE" ]; then
+            echo "❌ Download FAILED"
+            exit 1
+          fi
+
+          DL_SIZE=$(stat -c%s "$FILE")
+          SHA256=$(sha256sum "$FILE" | awk '{print $1}')
+
+          SRC="${{ steps.source_sizes.outputs.bcprov }}"
+          echo ""
+          echo "  📏 Size Check:"
+          echo "     Source : ${SRC} bytes"
+          echo "     Got    : ${DL_SIZE} bytes"
+
+          if [ "$SRC" != "0" ] && [ "$SRC" != "$DL_SIZE" ]; then
+            echo "  ❌ SIZE MISMATCH"
+            rm -f "$FILE"; exit 1
+          elif [ "$SRC" != "0" ]; then
+            echo "  ✅ Matches source"
+          fi
+
+          if [ "$DL_SIZE" -lt 1000000 ]; then
+            echo "  ❌ Too small: ${DL_SIZE} bytes"
+            rm -f "$FILE"; exit 1
+          fi
+
+          if ! file "$FILE" | grep -qi "java archive\|zip"; then
+            echo "  ❌ Not a valid JAR"
+            rm -f "$FILE"; exit 1
+          fi
+
+          echo ""
+          echo "  🔐 Verifying checksum..."
+          BASE="https://repo1.maven.org/maven2/org/bouncycastle/bcprov-jdk18on/${VERSION}"
+
+          REMOTE=$(curl -fsSL "${BASE}/${JAR_NAME}.sha256" 2>/dev/null || \
+                   curl -fsSL "${BASE}/${JAR_NAME}.sha1" 2>/dev/null || echo "")
+
+          if [ -n "$REMOTE" ]; then
+            REMOTE=$(echo "$REMOTE" | awk '{print $1}')
+            LOCAL_256=$(sha256sum "$FILE" | awk '{print $1}')
+            LOCAL_1=$(sha1sum "$FILE" | awk '{print $1}')
+
+            if [ "$REMOTE" == "$LOCAL_256" ] || [ "$REMOTE" == "$LOCAL_1" ]; then
+              echo "  ✅ Checksum verified"
+            else
+              echo "  ❌ Checksum MISMATCH"
+              rm -f "$FILE"; exit 1
+            fi
+          else
+            echo "  ⚠️ No remote checksum"
+          fi
+
+          echo ""
+          echo "  ✅ bcprov STAGED"
+          echo "     JAR    : ${JAR_NAME}"
+          echo "     Size   : $(numfmt --to=iec-i --suffix=B $DL_SIZE)"
+          echo "     SHA-256: $SHA256"
+
+          echo "jar_name=$JAR_NAME" >> "$GITHUB_OUTPUT"
+          echo "sha256=$SHA256" >> "$GITHUB_OUTPUT"
+          echo "size=$DL_SIZE" >> "$GITHUB_OUTPUT"
+
+      - name: "🔒 [VALIDATE] Both artifacts in staging"
+        run: |
+          echo "══════════════════════════════════════════════════════════"
+          echo "  🔒 VALIDATION — staging/ (utils/ still untouched)"
+          echo "══════════════════════════════════════════════════════════"
+
+          ERRORS=0
+          PASS=0
+
+          check() {
+            local N=$1 D=$2 R=$3 DETAIL=$4
+            if [ "$R" -eq 0 ]; then
+              PASS=$((PASS + 1))
+              echo "  [$N] ✅ $D"
+            else
+              ERRORS=$((ERRORS + 1))
+              echo "  [$N] ❌ $D"
+            fi
+            [ -n "$DETAIL" ] && echo "       $DETAIL"
+          }
+
+          AK="$STAGING_DIR/apksigner.jar"
+          BC="$STAGING_DIR/${{ steps.dl_bcprov.outputs.jar_name }}"
+
+          echo ""
+          echo "  ── apksigner.jar ──"
+
+          [ -f "$AK" ]
+          check "1/8" "Exists in staging" $?
+
+          file "$AK" | grep -qi "java archive\|zip"
+          check "2/8" "Valid JAR format" $?
+
+          AK_TEST=$(java -jar "$AK" version 2>/dev/null || echo "")
+          [ -n "$AK_TEST" ]
+          check "3/8" "Executes correctly" $? "version: $AK_TEST"
+
+          NATIVE=$(jar tf "$AK" 2>/dev/null | grep -cE '\.(so|dll|dylib)$' || echo "0")
+          [ "$NATIVE" -eq 0 ]
+          check "4/8" "No native binaries (ARM safe)" $?
+
+          echo ""
+          echo "  ── bcprov ──"
+
+          [ -f "$BC" ]
+          check "5/8" "Exists in staging" $?
+
+          file "$BC" | grep -qi "java archive\|zip"
+          check "6/8" "Valid JAR format" $?
+
+          BC_SIZE=$(stat -c%s "$BC" 2>/dev/null || echo "0")
+          [ "$BC_SIZE" -gt 1000000 ]
+          check "7/8" "Size > 1 MB" $? "${BC_SIZE} bytes"
+
+          jar tf "$BC" 2>/dev/null | grep -q "org/bouncycastle"
+          check "8/8" "Contains BouncyCastle classes" $?
+
+          echo ""
+          echo "══════════════════════════════════════════════════════════"
+          TOTAL=$((PASS + ERRORS))
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "  ❌ FAILED: ${PASS}/${TOTAL}"
+            echo ""
+            echo "  ⛔ OLD FILES IN utils/ REMAIN UNTOUCHED"
+            echo "  ⛔ NOTHING WAS REPLACED"
+            echo "══════════════════════════════════════════════════════════"
+            exit 1
+          fi
+
+          echo "  ✅ ALL PASSED: ${PASS}/${TOTAL}"
+          echo ""
+          echo "  ✅ Proceeding to remove old → replace with new"
+          echo "══════════════════════════════════════════════════════════"
+
+      - name: "🗑️ [REPLACE] Remove old files from utils/"
+        run: |
+          echo "══════════════════════════════════════════════════════════"
+          echo "  🗑️ REMOVING OLD FILES (validation passed)"
+          echo "══════════════════════════════════════════════════════════"
+
+          echo ""
+          echo "  Old files in utils/:"
+          ls -lh "${UTILS_DIR}/"*.jar 2>/dev/null || echo "  (none found)"
+
+          OLD_BC=$(find "${UTILS_DIR}/" -name "bcprov-jdk18on-*.jar" -type f 2>/dev/null)
+          if [ -n "$OLD_BC" ]; then
+            echo "$OLD_BC" | while read -r f; do
+              echo "  🗑️ Removing: $f"
+              rm -f "$f"
+            done
+          else
+            echo "  ℹ️ No old bcprov JARs"
+          fi
+
+          if [ -f "${UTILS_DIR}/apksigner.jar" ]; then
+            echo "  🗑️ Removing: ${UTILS_DIR}/apksigner.jar"
+            rm -f "${UTILS_DIR}/apksigner.jar"
+          else
+            echo "  ℹ️ No old apksigner.jar"
+          fi
+
+          echo ""
+          echo "  ✅ Old files removed"
+          echo "══════════════════════════════════════════════════════════"
+
+      - name: "📂 [REPLACE] Move new files staging → utils/"
+        run: |
+          BC_JAR="${{ steps.dl_bcprov.outputs.jar_name }}"
+
+          echo "══════════════════════════════════════════════════════════"
+          echo "  📂 MOVING NEW FILES: staging/ → utils/"
+          echo "══════════════════════════════════════════════════════════"
+
+          echo "  📦 ${STAGING_DIR}/apksigner.jar → ${UTILS_DIR}/apksigner.jar"
+          mv "$STAGING_DIR/apksigner.jar" "${UTILS_DIR}/apksigner.jar"
+
+          echo "  📦 ${STAGING_DIR}/${BC_JAR} → ${UTILS_DIR}/${BC_JAR}"
+          mv "$STAGING_DIR/${BC_JAR}" "${UTILS_DIR}/${BC_JAR}"
+
+          echo ""
+          echo "  Final utils/ contents:"
+          ls -lh "${UTILS_DIR}/"*.jar 2>/dev/null
+          ls -lh "${UTILS_DIR}/versions.json" 2>/dev/null
+
+          echo ""
+          echo "  ✅ New files in place"
+          echo "══════════════════════════════════════════════════════════"
+
+      - name: "🔒 [POST-CHECK] Verify files in utils/"
+        run: |
+          echo "══════════════════════════════════════════════════════════"
+          echo "  🔒 POST-REPLACE SANITY CHECK"
+          echo "══════════════════════════════════════════════════════════"
+
+          BC_JAR="${{ steps.dl_bcprov.outputs.jar_name }}"
+          ERRORS=0
+
+          echo ""
+          if [ -f "${UTILS_DIR}/apksigner.jar" ]; then
+            ACTUAL_SHA=$(sha256sum "${UTILS_DIR}/apksigner.jar" | awk '{print $1}')
+            EXPECTED_SHA="${{ steps.dl_apksigner.outputs.sha256 }}"
+            if [ "$ACTUAL_SHA" == "$EXPECTED_SHA" ]; then
+              echo "  ✅ apksigner.jar: SHA-256 matches staged file"
+            else
+              echo "  ❌ apksigner.jar: SHA-256 MISMATCH after move!"
+              ERRORS=$((ERRORS + 1))
+            fi
+          else
+            echo "  ❌ apksigner.jar MISSING from utils/"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          if [ -f "${UTILS_DIR}/${BC_JAR}" ]; then
+            ACTUAL_SHA=$(sha256sum "${UTILS_DIR}/${BC_JAR}" | awk '{print $1}')
+            EXPECTED_SHA="${{ steps.dl_bcprov.outputs.sha256 }}"
+            if [ "$ACTUAL_SHA" == "$EXPECTED_SHA" ]; then
+              echo "  ✅ ${BC_JAR}: SHA-256 matches staged file"
+            else
+              echo "  ❌ ${BC_JAR}: SHA-256 MISMATCH after move!"
+              ERRORS=$((ERRORS + 1))
+            fi
+          else
+            echo "  ❌ ${BC_JAR} MISSING from utils/"
+            ERRORS=$((ERRORS + 1))
+          fi
+
+          echo ""
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "  ❌ POST-CHECK FAILED"
+            exit 1
+          fi
+          echo "  ✅ POST-CHECK PASSED"
+          echo "══════════════════════════════════════════════════════════"
+
+      - name: "📝 Update versions.json"
+        run: |
+          TS=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          BC_VER="${{ steps.versions.outputs.bcprov }}"
+          BT_VER="${{ steps.versions.outputs.build_tools }}"
+          AK_VER="${{ steps.dl_apksigner.outputs.version }}"
+          BC_JAR="${{ steps.dl_bcprov.outputs.jar_name }}"
+
+          jq -n \
+            --arg bc_ver "$BC_VER" \
+            --arg bc_jar "$BC_JAR" \
+            --argjson bc_size ${{ steps.dl_bcprov.outputs.size }} \
+            --arg bc_sha "${{ steps.dl_bcprov.outputs.sha256 }}" \
+            --arg bc_url "https://repo1.maven.org/maven2/org/bouncycastle/bcprov-jdk18on/${BC_VER}/${BC_JAR}" \
+            --arg bt_ver "$BT_VER" \
+            --arg ak_ver "$AK_VER" \
+            --argjson ak_size ${{ steps.dl_apksigner.outputs.size }} \
+            --arg ak_sha "${{ steps.dl_apksigner.outputs.sha256 }}" \
+            --arg ak_from "build-tools-${BT_VER}" \
+            --arg ts "$TS" \
+            '{
+              bcprov: {
+                version: $bc_ver,
+                artifact: "bcprov-jdk18on",
+                jar_file: $bc_jar,
+                jar_size_bytes: $bc_size,
+                sha256: $bc_sha,
+                download_url: $bc_url,
+                updated_at: $ts
+              },
+              build_tools: {
+                version: $bt_ver,
+                source: "android-sdk",
+                updated_at: $ts
+              },
+              apksigner: {
+                version: $ak_ver,
+                jar_file: "apksigner.jar",
+                jar_size_bytes: $ak_size,
+                sha256: $ak_sha,
+                extracted_from: $ak_from,
+                arm_compatible: true,
+                updated_at: $ts
+              }
+            }' > "${UTILS_DIR}/versions.json"
+
+          echo "📝 Final versions.json:"
+          cat "${UTILS_DIR}/versions.json"
+
+      - name: "🚀 Commit and push"
+        run: |
+          BC_VER="${{ steps.versions.outputs.bcprov }}"
+          BT_VER="${{ steps.versions.outputs.build_tools }}"
+          AK_VER="${{ steps.dl_apksigner.outputs.version }}"
+          BC_JAR="${{ steps.dl_bcprov.outputs.jar_name }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add "${UTILS_DIR}/${BC_JAR}"
+          git add "${UTILS_DIR}/apksigner.jar"
+          git add "${UTILS_DIR}/versions.json"
+
+          git add -u "${UTILS_DIR}/"
+
+          if git diff --cached --quiet; then
+            echo "ℹ️ No changes to commit"
+          else
+            git commit -m "chore: bcprov ${BC_VER} + apksigner ${AK_VER} (build-tools ${BT_VER})
+
+          Order of operations:
+            1. Downloaded build-tools ${BT_VER} → extracted apksigner.jar to staging
+            2. Downloaded bcprov-jdk18on-${BC_VER}.jar to staging
+            3. Validated both in staging (8/8 passed)
+            4. Removed old files from utils/
+            5. Moved new files from staging to utils/
+            6. Post-replace SHA-256 verification passed
+
+          bcprov-jdk18on:
+            File: ${BC_JAR}
+            Size: ${{ steps.dl_bcprov.outputs.size }} bytes (verified vs source)
+            SHA-256: ${{ steps.dl_bcprov.outputs.sha256 }}
+
+          apksigner:
+            Version: ${AK_VER}
+            From: build-tools-${BT_VER}
+            Size: ${{ steps.dl_apksigner.outputs.size }} bytes (verified vs ZIP listing)
+            SHA-256: ${{ steps.dl_apksigner.outputs.sha256 }}
+            ARM: pure Java ✅
+
+          Validation: 8/8 + post-check passed
+          PR: #${{ github.event.pull_request.number || 'manual' }}"
+
+            git push origin main
+
+            echo ""
+            echo "══════════════════════════════════════"
+            echo "  🎉 COMMITTED TO utils/"
+            echo "══════════════════════════════════════"
+            echo "  📦 ${BC_JAR}"
+            echo "  📦 apksigner.jar"
+            echo "  📦 versions.json"
+            echo "══════════════════════════════════════"
+          fi
