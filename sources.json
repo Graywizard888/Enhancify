@@ -1,7 +1,7 @@
 [
   {
     "source": "ReVanced",
-    "repository": "ReVanced/revanced-patches",
+    "repository": "ReVanced/ravanced-patches",
     "api": {
       "json": "https://api.revanced.app/v4/patches/list",
       "version": null
