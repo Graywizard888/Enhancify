@@ -97,7 +97,7 @@ downloadBatchAria2c() {
                    --dir="${_dl_dirs[$i]}" \
                    --out="${_dl_files[$i]}" \
                    --split=8 \
-                   --min-split-size=1M \
+                   --min-split-size=5M \
                    --max-connection-per-server=8 \
                    --file-allocation=none \
                    --disk-cache=50M \
