@@ -100,7 +100,7 @@ downloadBatchAria2c() {
                    --min-split-size=1M \
                    --max-connection-per-server=8 \
                    --file-allocation=none \
-                   --disk-cache=30M \
+                   --disk-cache=50M \
                    --enable-http-pipelining=true \
                    --connect-timeout=5 \
                    --timeout=15 \
