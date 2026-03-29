@@ -28,8 +28,8 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq jq aria2 xmlstarlet unzip
-          echo "✅ Installed: jq, aria2, xmlstarlet, unzip"
+          sudo apt-get install -y -qq jq aria2 xmlstarlet unzip python3
+          echo "✅ Installed: jq, aria2, xmlstarlet, unzip, python3"
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -95,52 +95,220 @@ jobs:
 
           SDK_XML=$(curl -fsSL "https://dl.google.com/android/repository/repository2-3.xml")
 
-          # ── Extract version AND download URL together from XML ──
-          # Filter: only build-tools, exclude rc/preview, stable channel only
+          # Save XML to temp file for Python parsing
+          echo "$SDK_XML" > /tmp/sdk_repo.xml
+
+          PARSED=""
+
+          # ══════════════════════════════════════════════════════
+          # STRATEGY 1: xmlstarlet — sdk + common/02 namespaces
+          # ══════════════════════════════════════════════════════
+          echo "📋 Strategy 1: xmlstarlet (sdk + common/02)..."
           PARSED=$(echo "$SDK_XML" \
             | xmlstarlet sel \
                 -N sdk="http://schemas.android.com/sdk/android/repo/repository2/03" \
+                -N common="http://schemas.android.com/repository/android/common/02" \
                 -t \
-                -m "//sdk:remotePackage[starts-with(@path,'build-tools;')][not(contains(@path,'rc'))][not(contains(@path,'preview'))]" \
-                -v "concat(sdk:revision/sdk:major,'.',sdk:revision/sdk:minor,'.',sdk:revision/sdk:micro)" \
-                -o "|" \
-                -v ".//sdk:archive[sdk:host-os='linux']//sdk:url" \
+                -m "//sdk:remotePackage[starts-with(@path,'build-tools;')]" \
+                -v "@path" -o "|" \
+                -v "sdk:revision/sdk:major" -o "." \
+                -v "sdk:revision/sdk:minor" -o "." \
+                -v "sdk:revision/sdk:micro" -o "|" \
+                -v ".//common:archive[common:host-os='linux']//common:url" \
                 -n 2>/dev/null || true)
 
-          # Fallback: try without channel filter if first attempt got nothing
+          if [ -n "$PARSED" ]; then
+            echo "  ✅ Strategy 1 succeeded"
+          fi
+
+          # ══════════════════════════════════════════════════════
+          # STRATEGY 2: xmlstarlet — all sdk namespace
+          # ══════════════════════════════════════════════════════
           if [ -z "$PARSED" ]; then
-            echo "⚠️ First parse attempt empty, trying broader match..."
+            echo "📋 Strategy 2: xmlstarlet (all-sdk namespace)..."
             PARSED=$(echo "$SDK_XML" \
               | xmlstarlet sel \
                   -N sdk="http://schemas.android.com/sdk/android/repo/repository2/03" \
                   -t \
-                  -m "//sdk:remotePackage[starts-with(@path,'build-tools;')][not(contains(@path,'rc'))][not(contains(@path,'preview'))]" \
-                  -v "concat(sdk:revision/sdk:major,'.',sdk:revision/sdk:minor,'.',sdk:revision/sdk:micro)" \
-                  -o "|" \
-                  -m ".//sdk:archive[sdk:host-os='linux']" \
-                  -v ".//sdk:url" \
-                  -b \
+                  -m "//sdk:remotePackage[starts-with(@path,'build-tools;')]" \
+                  -v "@path" -o "|" \
+                  -v "sdk:revision/sdk:major" -o "." \
+                  -v "sdk:revision/sdk:minor" -o "." \
+                  -v "sdk:revision/sdk:micro" -o "|" \
+                  -v ".//sdk:archive[sdk:host-os='linux']//sdk:url" \
                   -n 2>/dev/null || true)
+
+            if [ -n "$PARSED" ]; then
+              echo "  ✅ Strategy 2 succeeded"
+            fi
           fi
 
+          # ══════════════════════════════════════════════════════
+          # STRATEGY 3: xmlstarlet — sdk + common/01 namespaces
+          # ══════════════════════════════════════════════════════
           if [ -z "$PARSED" ]; then
-            echo "❌ Failed to parse build-tools from XML"
+            echo "📋 Strategy 3: xmlstarlet (sdk + common/01)..."
+            PARSED=$(echo "$SDK_XML" \
+              | xmlstarlet sel \
+                  -N sdk="http://schemas.android.com/sdk/android/repo/repository2/03" \
+                  -N common="http://schemas.android.com/repository/android/common/01" \
+                  -t \
+                  -m "//sdk:remotePackage[starts-with(@path,'build-tools;')]" \
+                  -v "@path" -o "|" \
+                  -v "sdk:revision/sdk:major" -o "." \
+                  -v "sdk:revision/sdk:minor" -o "." \
+                  -v "sdk:revision/sdk:micro" -o "|" \
+                  -v ".//common:archive[common:host-os='linux']//common:url" \
+                  -n 2>/dev/null || true)
+
+            if [ -n "$PARSED" ]; then
+              echo "  ✅ Strategy 3 succeeded"
+            fi
+          fi
+
+          # ══════════════════════════════════════════════════════
+          # STRATEGY 4: Strip all namespaces, parse clean XML
+          # ══════════════════════════════════════════════════════
+          if [ -z "$PARSED" ]; then
+            echo "📋 Strategy 4: Strip namespaces entirely..."
+            CLEAN_XML=$(echo "$SDK_XML" \
+              | sed 's/ xmlns[^=]*="[^"]*"//g' \
+              | sed 's/<[a-zA-Z0-9_]*://g' \
+              | sed 's/<\/[a-zA-Z0-9_]*://g')
+
+            PARSED=$(echo "$CLEAN_XML" \
+              | xmlstarlet sel \
+                  -t \
+                  -m "//remotePackage[starts-with(@path,'build-tools;')]" \
+                  -v "@path" -o "|" \
+                  -v "revision/major" -o "." \
+                  -v "revision/minor" -o "." \
+                  -v "revision/micro" -o "|" \
+                  -v ".//archive[host-os='linux']//url" \
+                  -n 2>/dev/null || true)
+
+            if [ -n "$PARSED" ]; then
+              echo "  ✅ Strategy 4 succeeded"
+            fi
+          fi
+
+          # ══════════════════════════════════════════════════════
+          # STRATEGY 5: Python namespace-agnostic parsing
+          # ══════════════════════════════════════════════════════
+          if [ -z "$PARSED" ]; then
+            echo "📋 Strategy 5: Python namespace-agnostic parsing..."
+            PARSED=$(python3 << 'PYEOF'
+import xml.etree.ElementTree as ET
+
+def local_tag(tag):
+    return tag.split('}')[-1] if '}' in tag else tag
+
+tree = ET.parse('/tmp/sdk_repo.xml')
+root = tree.getroot()
+
+for pkg in root.iter():
+    if local_tag(pkg.tag) != 'remotePackage':
+        continue
+
+    path_attr = pkg.get('path', '')
+    if not path_attr.startswith('build-tools;'):
+        continue
+
+    major = minor = micro = ''
+    for rev in pkg.iter():
+        rt = local_tag(rev.tag)
+        if rt == 'revision':
+            for rc in rev:
+                rct = local_tag(rc.tag)
+                if rct == 'major': major = rc.text or '0'
+                elif rct == 'minor': minor = rc.text or '0'
+                elif rct == 'micro': micro = rc.text or '0'
+            break
+
+    version = f'{major}.{minor}.{micro}'
+
+    url = ''
+    for archive in pkg.iter():
+        if local_tag(archive.tag) != 'archive':
+            continue
+        host_os = ''
+        archive_url = ''
+        for ac in archive.iter():
+            act = local_tag(ac.tag)
+            if act == 'host-os':
+                host_os = ac.text or ''
+            elif act == 'url':
+                archive_url = ac.text or ''
+        if host_os == 'linux' and archive_url:
+            url = archive_url
+            break
+
+    if major:
+        print(f'{path_attr}|{version}|{url}')
+PYEOF
+)
+            if [ -n "$PARSED" ]; then
+              echo "  ✅ Strategy 5 succeeded"
+            fi
+          fi
+
+          # ══════════════════════════════════════════════════════
+          # STRATEGY 6: grep/sed regex last resort
+          # ══════════════════════════════════════════════════════
+          if [ -z "$PARSED" ]; then
+            echo "📋 Strategy 6: grep/sed regex fallback..."
+            PATHS=$(echo "$SDK_XML" \
+              | grep -oP 'path="build-tools;[^"]*"' \
+              | grep -oP 'build-tools;[\d.]+' || true)
+
+            for BT_PATH in $PATHS; do
+              VER=$(echo "$BT_PATH" | sed 's/build-tools;//')
+              PARSED="${PARSED}${BT_PATH}|${VER}|
+"
+            done
+
+            if [ -n "$PARSED" ]; then
+              echo "  ✅ Strategy 6 succeeded (URLs not available)"
+            fi
+          fi
+
+          # ══════════════════════════════════════════════════════
+          # Process results
+          # ══════════════════════════════════════════════════════
+          if [ -z "$PARSED" ]; then
+            echo ""
+            echo "❌ ALL STRATEGIES FAILED to parse build-tools from XML"
+            echo ""
+            echo "  🔍 Debug: First 100 lines of XML:"
+            echo "$SDK_XML" | head -100
             exit 1
           fi
 
+          # Filter out rc/preview, remove empty lines
+          FILTERED=$(echo "$PARSED" \
+            | grep -v '^$' \
+            | grep -vi 'rc' \
+            | grep -vi 'preview' \
+            || true)
+
+          # If everything was filtered out, use unfiltered
+          [ -z "$FILTERED" ] && FILTERED=$(echo "$PARSED" | grep -v '^$')
+
+          echo ""
           echo "📋 Found build-tools entries:"
-          echo "$PARSED" | grep -v '^$' | sort -t'|' -k1 -V
+          echo "$FILTERED" | sort -t'|' -k2 -V
 
           # Get the latest version line (sort by version field)
-          LATEST_LINE=$(echo "$PARSED" | grep -v '^$' | sort -t'|' -k1 -V | tail -1)
-          LATEST=$(echo "$LATEST_LINE" | cut -d'|' -f1)
-          DL_FILE=$(echo "$LATEST_LINE" | cut -d'|' -f2)
+          LATEST_LINE=$(echo "$FILTERED" | sort -t'|' -k2 -V | tail -1)
+          LATEST=$(echo "$LATEST_LINE" | cut -d'|' -f2)
+          DL_FILE=$(echo "$LATEST_LINE" | cut -d'|' -f3)
 
           if [ -z "$LATEST" ]; then
-            echo "❌ Failed to get build-tools version"
+            echo "❌ Failed to determine latest build-tools version"
             exit 1
           fi
 
+          echo ""
           echo "version=$LATEST" >> "$GITHUB_OUTPUT"
           echo "✅ Latest build-tools: $LATEST"
 
@@ -149,15 +317,14 @@ jobs:
             DL_URL="https://dl.google.com/android/repository/${DL_FILE}"
             echo "📦 URL from XML: $DL_URL"
           else
-            echo "⚠️ Could not extract URL from XML, trying common patterns..."
+            echo "⚠️ No URL in XML, probing common patterns..."
             DL_URL=""
 
-            # Try both URL formats: underscore and hyphen before OS
             for URL_CANDIDATE in \
-              "https://dl.google.com/android/repository/build-tools_r${LATEST}_linux.zip" \
-              "https://dl.google.com/android/repository/build-tools_r${LATEST}-linux.zip"; do
+              "https://dl.google.com/android/repository/build-tools_r${LATEST}-linux.zip" \
+              "https://dl.google.com/android/repository/build-tools_r${LATEST}_linux.zip"; do
 
-              HTTP_CODE=$(curl -sI -o /dev/null -w "%{http_code}" "$URL_CANDIDATE")
+              HTTP_CODE=$(curl -sI -o /dev/null -w "%{http_code}" -L "$URL_CANDIDATE" 2>/dev/null)
               echo "  Trying: $URL_CANDIDATE → HTTP $HTTP_CODE"
 
               if [ "$HTTP_CODE" = "200" ]; then
@@ -179,7 +346,7 @@ jobs:
           # ── Pre-flight: verify URL is reachable ──
           echo ""
           echo "🔍 Verifying URL is reachable..."
-          HTTP_CODE=$(curl -sI -o /dev/null -w "%{http_code}" "$DL_URL")
+          HTTP_CODE=$(curl -sI -o /dev/null -w "%{http_code}" -L "$DL_URL" 2>/dev/null)
           if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "302" ] && [ "$HTTP_CODE" != "301" ]; then
             echo "❌ URL returned HTTP $HTTP_CODE: $DL_URL"
             echo ""
@@ -188,6 +355,9 @@ jobs:
             exit 1
           fi
           echo "✅ URL verified (HTTP $HTTP_CODE)"
+
+          # Cleanup
+          rm -f /tmp/sdk_repo.xml
 
       - name: Compare versions
         id: compare
@@ -333,7 +503,7 @@ jobs:
           if [ -z "$EXPECTED_SIZE" ] || [ "$EXPECTED_SIZE" == "0" ]; then
             echo "  ❌ apksigner.jar NOT found in ZIP"
             echo ""
-            echo "  📋 ZIP contents:"
+            echo "  📋 ZIP contents (first 30 entries):"
             unzip -l "$ZIP" | head -30
             rm -f "$ZIP"
             exit 1
