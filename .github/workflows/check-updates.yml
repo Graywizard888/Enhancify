@@ -95,22 +95,46 @@ jobs:
 
           SDK_XML=$(curl -fsSL "https://dl.google.com/android/repository/repository2-3.xml")
 
-          VERSIONS=$(echo "$SDK_XML" \
+          # ── Extract version AND download URL together from XML ──
+          # Filter: only build-tools, exclude rc/preview, stable channel only
+          PARSED=$(echo "$SDK_XML" \
             | xmlstarlet sel \
                 -N sdk="http://schemas.android.com/sdk/android/repo/repository2/03" \
-                -t -m "//sdk:remotePackage[starts-with(@path,'build-tools;')]" \
-                -v "sdk:revision/sdk:major" -o "." \
-                -v "sdk:revision/sdk:minor" -o "." \
-                -v "sdk:revision/sdk:micro" -n 2>/dev/null || true)
+                -t \
+                -m "//sdk:remotePackage[starts-with(@path,'build-tools;')][not(contains(@path,'rc'))][not(contains(@path,'preview'))]" \
+                -v "concat(sdk:revision/sdk:major,'.',sdk:revision/sdk:minor,'.',sdk:revision/sdk:micro)" \
+                -o "|" \
+                -v ".//sdk:archive[sdk:host-os='linux']//sdk:url" \
+                -n 2>/dev/null || true)
 
-          if [ -z "$VERSIONS" ]; then
-            VERSIONS=$(echo "$SDK_XML" \
-              | grep -oP 'path="build-tools;[^"]*"' \
-              | grep -oP '[\d]+\.[\d]+\.[\d]+' \
-              | sort -V)
+          # Fallback: try without channel filter if first attempt got nothing
+          if [ -z "$PARSED" ]; then
+            echo "⚠️ First parse attempt empty, trying broader match..."
+            PARSED=$(echo "$SDK_XML" \
+              | xmlstarlet sel \
+                  -N sdk="http://schemas.android.com/sdk/android/repo/repository2/03" \
+                  -t \
+                  -m "//sdk:remotePackage[starts-with(@path,'build-tools;')][not(contains(@path,'rc'))][not(contains(@path,'preview'))]" \
+                  -v "concat(sdk:revision/sdk:major,'.',sdk:revision/sdk:minor,'.',sdk:revision/sdk:micro)" \
+                  -o "|" \
+                  -m ".//sdk:archive[sdk:host-os='linux']" \
+                  -v ".//sdk:url" \
+                  -b \
+                  -n 2>/dev/null || true)
           fi
 
-          LATEST=$(echo "$VERSIONS" | sort -V | tail -1)
+          if [ -z "$PARSED" ]; then
+            echo "❌ Failed to parse build-tools from XML"
+            exit 1
+          fi
+
+          echo "📋 Found build-tools entries:"
+          echo "$PARSED" | grep -v '^$' | sort -t'|' -k1 -V
+
+          # Get the latest version line (sort by version field)
+          LATEST_LINE=$(echo "$PARSED" | grep -v '^$' | sort -t'|' -k1 -V | tail -1)
+          LATEST=$(echo "$LATEST_LINE" | cut -d'|' -f1)
+          DL_FILE=$(echo "$LATEST_LINE" | cut -d'|' -f2)
 
           if [ -z "$LATEST" ]; then
             echo "❌ Failed to get build-tools version"
@@ -121,19 +145,49 @@ jobs:
           echo "✅ Latest build-tools: $LATEST"
 
           # ── Resolve download URL ──
-          BT_PATH="build-tools;${LATEST}"
+          if [ -n "$DL_FILE" ]; then
+            DL_URL="https://dl.google.com/android/repository/${DL_FILE}"
+            echo "📦 URL from XML: $DL_URL"
+          else
+            echo "⚠️ Could not extract URL from XML, trying common patterns..."
+            DL_URL=""
 
-          DL_FILE=$(echo "$SDK_XML" \
-            | xmlstarlet sel \
-                -N sdk="http://schemas.android.com/sdk/android/repo/repository2/03" \
-                -t -m "//sdk:remotePackage[@path='${BT_PATH}']//sdk:archive[sdk:host-os='linux']" \
-                -v ".//sdk:url" -n 2>/dev/null | head -1 || true)
+            # Try both URL formats: underscore and hyphen before OS
+            for URL_CANDIDATE in \
+              "https://dl.google.com/android/repository/build-tools_r${LATEST}_linux.zip" \
+              "https://dl.google.com/android/repository/build-tools_r${LATEST}-linux.zip"; do
 
-          [ -z "$DL_FILE" ] && DL_FILE="build-tools_r${LATEST}-linux.zip"
+              HTTP_CODE=$(curl -sI -o /dev/null -w "%{http_code}" "$URL_CANDIDATE")
+              echo "  Trying: $URL_CANDIDATE → HTTP $HTTP_CODE"
 
-          DL_URL="https://dl.google.com/android/repository/${DL_FILE}"
+              if [ "$HTTP_CODE" = "200" ]; then
+                DL_URL="$URL_CANDIDATE"
+                echo "  ✅ Found valid URL"
+                break
+              fi
+            done
+
+            if [ -z "$DL_URL" ]; then
+              echo "❌ Could not determine download URL for build-tools $LATEST"
+              exit 1
+            fi
+          fi
+
           echo "download_url=$DL_URL" >> "$GITHUB_OUTPUT"
-          echo "📦 URL: $DL_URL"
+          echo "📦 Final URL: $DL_URL"
+
+          # ── Pre-flight: verify URL is reachable ──
+          echo ""
+          echo "🔍 Verifying URL is reachable..."
+          HTTP_CODE=$(curl -sI -o /dev/null -w "%{http_code}" "$DL_URL")
+          if [ "$HTTP_CODE" != "200" ] && [ "$HTTP_CODE" != "302" ] && [ "$HTTP_CODE" != "301" ]; then
+            echo "❌ URL returned HTTP $HTTP_CODE: $DL_URL"
+            echo ""
+            echo "  The build-tools version $LATEST may not have a downloadable"
+            echo "  archive yet. Check https://developer.android.com/tools/releases/build-tools"
+            exit 1
+          fi
+          echo "✅ URL verified (HTTP $HTTP_CODE)"
 
       - name: Compare versions
         id: compare
@@ -175,14 +229,32 @@ jobs:
 
           echo "🔍 Fetching source sizes..."
 
-          BC_SRC=$(curl -fsSLI "$BC_URL" | grep -i content-length | tail -1 | awk '{print $2}' | tr -d '\r')
-          BT_SRC=$(curl -fsSLI "$BT_URL" | grep -i content-length | tail -1 | awk '{print $2}' | tr -d '\r')
+          # ── bcprov size ──
+          BC_SRC=$(curl -fsSLI "$BC_URL" 2>/dev/null \
+            | grep -i content-length | tail -1 | awk '{print $2}' | tr -d '\r')
+          BC_SRC="${BC_SRC:-0}"
 
-          echo "bcprov=${BC_SRC:-0}" >> "$GITHUB_OUTPUT"
-          echo "build_tools=${BT_SRC:-0}" >> "$GITHUB_OUTPUT"
+          # ── build-tools size (use -f to fail on HTTP errors) ──
+          BT_SRC="0"
+          if BT_HEADERS=$(curl -sSLI -f "$BT_URL" 2>/dev/null); then
+            BT_SRC=$(echo "$BT_HEADERS" \
+              | grep -i content-length | tail -1 | awk '{print $2}' | tr -d '\r')
+            BT_SRC="${BT_SRC:-0}"
+          else
+            echo "  ⚠️ Could not fetch headers for build-tools URL"
+          fi
 
-          echo "  bcprov source      : ${BC_SRC:-unknown} bytes"
-          echo "  build-tools source : ${BT_SRC:-unknown} bytes"
+          # Sanity: build-tools zip should be > 1MB, otherwise it's an error page
+          if [ "$BT_SRC" != "0" ] && [ "$BT_SRC" -lt 1000000 ] 2>/dev/null; then
+            echo "  ⚠️ Build-tools Content-Length suspiciously small (${BT_SRC} bytes), ignoring"
+            BT_SRC="0"
+          fi
+
+          echo "bcprov=${BC_SRC}" >> "$GITHUB_OUTPUT"
+          echo "build_tools=${BT_SRC}" >> "$GITHUB_OUTPUT"
+
+          echo "  bcprov source      : ${BC_SRC} bytes"
+          echo "  build-tools source : ${BT_SRC} bytes"
 
       - name: "⬇️ [1/2] Download build-tools & extract apksigner.jar"
         if: steps.compare.outputs.needs_update == 'true'
@@ -228,6 +300,13 @@ jobs:
           ZIP_SIZE=$(stat -c%s "$ZIP")
           ZIP_HUMAN=$(numfmt --to=iec-i --suffix=B "$ZIP_SIZE")
 
+          # Sanity: ZIP must be > 1MB
+          if [ "$ZIP_SIZE" -lt 1000000 ]; then
+            echo "❌ Downloaded file too small (${ZIP_SIZE} bytes), likely not a valid ZIP"
+            rm -f "$ZIP"
+            exit 1
+          fi
+
           SRC_SIZE="${{ steps.source_sizes.outputs.build_tools }}"
           echo ""
           echo "  📏 ZIP Size Check:"
@@ -241,7 +320,7 @@ jobs:
           elif [ "$SRC_SIZE" != "0" ]; then
             echo "  ✅ ZIP size matches source"
           else
-            echo "  ⚠️ Source size unknown, skipping"
+            echo "  ⚠️ Source size unknown, skipping size comparison"
           fi
 
           echo ""
@@ -253,6 +332,9 @@ jobs:
 
           if [ -z "$EXPECTED_SIZE" ] || [ "$EXPECTED_SIZE" == "0" ]; then
             echo "  ❌ apksigner.jar NOT found in ZIP"
+            echo ""
+            echo "  📋 ZIP contents:"
+            unzip -l "$ZIP" | head -30
             rm -f "$ZIP"
             exit 1
           fi
