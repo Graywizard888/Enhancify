@@ -59,7 +59,7 @@ hasCustomKeystore() {
 }
 
 isRedditApp() {
-    [[ "${APP_NAME,,}" == *reddit* ]]
+    [[ "${APP_NAME,,}" == *reddit* || "${APP_NAME,,}" == *instagram* ]]
 }
 
 getApkExtension() {
