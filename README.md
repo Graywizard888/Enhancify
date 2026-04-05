@@ -111,7 +111,7 @@
 
 1.**Prepare Termux:**
 ```bash
-termux-setup-storage && git clone https://github.com/Graywizard888/Enhancify.git && cd Enhancify && bash install.sh
+pkg update && pkg upgrade -y && pkg install git -y && termux-setup-storage && git clone https://github.com/Graywizard888/Enhancify.git && cd Enhancify && bash install.sh
 ```
 
 
