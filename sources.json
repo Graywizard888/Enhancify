@@ -1,0 +1,90 @@
+[
+  {
+    "source": "ReVanced",
+    "repository": "ReVanced/ravanced-patches",
+    "api": {
+      "json": "",
+      "version": null
+    }
+  },
+  {
+    "source": "De-ReVanced",
+    "repository": "RookieEnough/De-ReVanced",
+    "api": {
+      "json": "https://raw.githubusercontent.com/RookieEnough/De-ReVanced/refs/heads/main/patches-list.json",
+      "version": null
+    }
+  },
+  {
+    "source": "Anddea",
+    "repository": "anddea/revanced-patches",
+    "api": {
+      "json": "https://raw.githubusercontent.com/anddea/revanced-patches/refs/heads/main/patches-list.json",
+      "version": null
+    }
+  },
+  {
+    "source": "ReVancedExperiments",
+    "repository": "Aunali321/ReVancedExperiments",
+    "api": {
+      "json": "",
+      "version": null
+    }
+  },
+  {
+    "source": "hoo-dles",
+    "repository": "hoo-dles/morphe-patches",
+    "api": {
+      "json": "https://raw.githubusercontent.com/hoo-dles/morphe-patches/refs/heads/main/patches-list.json",
+      "version": null
+    }
+  },
+  {
+    "source": "MorpheApp",
+    "repository": "MorpheApp/morphe-patches",
+    "api": {
+      "json": "https://raw.githubusercontent.com/MorpheApp/morphe-patches/refs/heads/main/patches-list.json",
+      "version": null
+    }
+  },
+  {
+    "source": "Rufusin-RVXM",
+    "repository": "rufusin/revanced-patches",
+    "api": {
+      "json": "https://raw.githubusercontent.com/rufusin/revanced-patches/refs/heads/main/patches.json",
+      "version": null
+    }
+  },
+  {
+    "source": "PikoTwitter",
+    "repository": "crimera/piko",
+    "api": {
+      "json": "https://raw.githubusercontent.com/crimera/piko/refs/heads/main/patches-list.json",
+      "version": null
+    }
+  },
+  {
+    "source": "AmpleRevanced",
+    "repository": "AmpleReVanced/revanced-patches",
+    "api": {
+      "json": "",
+      "version": null
+    }
+  },
+  {
+    "source": "Adobo",
+    "repository": "jkennethcarino/adobo",
+    "api": {
+      "json": "https://raw.githubusercontent.com/jkennethcarino/adobo/refs/heads/main/patches-list.json",
+      "version": null
+    }
+  },
+  {
+    "source": "Paresh-Patches",
+    "repository": "Paresh-Maheshwari/paresh-patches",
+    "api": {
+      "json": "https://raw.githubusercontent.com/Paresh-Maheshwari/paresh-patches/refs/heads/main/patches-list.json",
+      "version": null
+    }
+  }
+]
