@@ -1,0 +1,205 @@
+name: Setup Android SDK Build Tools
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:  # Manual trigger
+  schedule:
+    - cron: '0 0 * * 0'  # Auto-update every Sunday at midnight UTC
+
+jobs:
+  setup-build-tools:
+    name: Download Latest Android SDK Build Tools
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Create SDK Directory Structure
+        run: |
+          mkdir -p $HOME/android-sdk/cmdline-tools
+          echo "ANDROID_HOME=$HOME/android-sdk" >> $GITHUB_ENV
+          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
+
+      - name: Download Latest Android Command Line Tools
+        run: |
+          cd $HOME
+          echo "📥 Downloading latest Android SDK Command Line Tools..."
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          echo "✅ Download completed"
+
+      - name: Extract Command Line Tools
+        run: |
+          cd $HOME
+          echo "📦 Extracting Command Line Tools..."
+          unzip -q commandlinetools-linux-11076708_latest.zip
+          mv cmdline-tools $HOME/android-sdk/cmdline-tools/latest
+          rm commandlinetools-linux-11076708_latest.zip
+          echo "✅ Extraction completed"
+
+      - name: Set up Environment Variables
+        run: |
+          echo "$HOME/android-sdk/cmdline-tools/latest/bin" >> $GITHUB_PATH
+
+      - name: Verify sdkmanager Installation
+        run: |
+          echo "🔍 Verifying sdkmanager installation..."
+          sdkmanager --version
+          echo "✅ sdkmanager is working"
+
+      - name: Accept All SDK Licenses
+        run: |
+          echo "📝 Accepting all Android SDK licenses..."
+          yes | sdkmanager --licenses || true
+          echo "✅ All licenses accepted"
+
+      - name: Update SDK Manager
+        run: |
+          echo "🔄 Updating SDK Manager..."
+          sdkmanager --update
+          echo "✅ SDK Manager updated"
+
+      - name: Get Latest Build Tools Version
+        id: get-version
+        run: |
+          echo "🔍 Finding latest Build Tools version..."
+          LATEST_BUILD_TOOLS=$(sdkmanager --list | grep "build-tools;" | sed 's/.*build-tools;//' | awk '{print $1}' | sort -V | tail -n 1)
+          echo "Latest Build Tools version: $LATEST_BUILD_TOOLS"
+          echo "BUILD_TOOLS_VERSION=$LATEST_BUILD_TOOLS" >> $GITHUB_ENV
+          echo "version=$LATEST_BUILD_TOOLS" >> $GITHUB_OUTPUT
+
+      - name: Install Latest Build Tools
+        run: |
+          echo "📦 Installing Build Tools version ${{ env.BUILD_TOOLS_VERSION }}..."
+          sdkmanager "build-tools;${{ env.BUILD_TOOLS_VERSION }}"
+          echo "✅ Build Tools ${{ env.BUILD_TOOLS_VERSION }} installed successfully"
+
+      - name: Verify Build Tools Installation
+        run: |
+          echo "🔍 Verifying Build Tools installation..."
+          BUILD_TOOLS_PATH="$HOME/android-sdk/build-tools/${{ env.BUILD_TOOLS_VERSION }}"
+          
+          echo "Checking for required tools..."
+          
+          if [ -f "$BUILD_TOOLS_PATH/aapt2" ]; then
+            echo "✅ aapt2 found"
+          else
+            echo "❌ aapt2 NOT found"
+            exit 1
+          fi
+          
+          if [ -f "$BUILD_TOOLS_PATH/apksigner" ]; then
+            echo "✅ apksigner found"
+          else
+            echo "❌ apksigner NOT found"
+            exit 1
+          fi
+          
+          if [ -f "$BUILD_TOOLS_PATH/dexdump" ]; then
+            echo "✅ dexdump found"
+          else
+            echo "❌ dexdump NOT found"
+            exit 1
+          fi
+          
+          if [ -f "$BUILD_TOOLS_PATH/zipalign" ]; then
+            echo "✅ zipalign found"
+          else
+            echo "❌ zipalign NOT found"
+            exit 1
+          fi
+          
+          echo ""
+          echo "✅ All required Build Tools verified successfully!"
+
+      - name: List Build Tools Contents
+        run: |
+          echo "📋 Build Tools directory contents:"
+          ls -lh "$HOME/android-sdk/build-tools/${{ env.BUILD_TOOLS_VERSION }}"
+
+      - name: Display Build Tools Information
+        run: |
+          echo "================================================"
+          echo "📊 Android SDK Build Tools Setup Summary"
+          echo "================================================"
+          echo "Build Tools Version: ${{ env.BUILD_TOOLS_VERSION }}"
+          echo "Installation Path: $HOME/android-sdk/build-tools/${{ env.BUILD_TOOLS_VERSION }}"
+          echo "================================================"
+          echo ""
+          echo "📦 Key Tools Included:"
+          echo "  - aapt2 (Android Asset Packaging Tool)"
+          echo "  - apksigner (APK Signature Tool)"
+          echo "  - dexdump (DEX File Verifier)"
+          echo "  - zipalign (APK Optimization Tool)"
+          echo ""
+          echo "✅ Build Tools setup completed successfully!"
+
+      - name: Create Build Info File
+        run: |
+          mkdir -p build-tools-info
+          echo "BUILD_TOOLS_VERSION=${{ env.BUILD_TOOLS_VERSION }}" > build-tools-info/version.txt
+          echo "DOWNLOAD_DATE=$(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> build-tools-info/version.txt
+          echo "ANDROID_HOME=$HOME/android-sdk" >> build-tools-info/version.txt
+          echo "BUILD_TOOLS_PATH=$HOME/android-sdk/build-tools/${{ env.BUILD_TOOLS_VERSION }}" >> build-tools-info/version.txt
+          ls -lh "$HOME/android-sdk/build-tools/${{ env.BUILD_TOOLS_VERSION }}" > build-tools-info/contents.txt
+          cat build-tools-info/version.txt
+
+      - name: Cache Build Tools
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.ANDROID_HOME }}/build-tools/${{ env.BUILD_TOOLS_VERSION }}
+          key: android-build-tools-${{ runner.os }}-${{ env.BUILD_TOOLS_VERSION }}
+          restore-keys: |
+            android-build-tools-${{ runner.os }}-
+
+      - name: Upload Build Tools as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build-tools-${{ env.BUILD_TOOLS_VERSION }}
+          path: ${{ env.ANDROID_HOME }}/build-tools/${{ env.BUILD_TOOLS_VERSION }}
+          retention-days: 30
+          compression-level: 9
+
+      - name: Upload Build Info as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-tools-info
+          path: build-tools-info/
+          retention-days: 30
+
+      - name: Create Release Info
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        run: |
+          echo "# Android SDK Build Tools ${{ env.BUILD_TOOLS_VERSION }}" > release-notes.md
+          echo "" >> release-notes.md
+          echo "**Download Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> release-notes.md
+          echo "" >> release-notes.md
+          echo "## Included Tools" >> release-notes.md
+          echo "- aapt2 (Android Asset Packaging Tool)" >> release-notes.md
+          echo "- apksigner (APK Signature Tool)" >> release-notes.md
+          echo "- dexdump (DEX File Verifier)" >> release-notes.md
+          echo "- zipalign (APK Optimization Tool)" >> release-notes.md
+          echo "- And more..." >> release-notes.md
+          echo "" >> release-notes.md
+          echo "## Installation Path" >> release-notes.md
+          echo "\`\`\`" >> release-notes.md
+          echo "$HOME/android-sdk/build-tools/${{ env.BUILD_TOOLS_VERSION }}" >> release-notes.md
+          echo "\`\`\`" >> release-notes.md
+          cat release-notes.md
+
+      - name: Upload Release Notes
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: release-notes.md
+          retention-days: 30
