@@ -21,7 +21,7 @@ installApp() {
 
             if [ $? -eq 0 ]; then
                 notify info "Realigning success\ncontinuing signing"
-                cp -f "$aligned_apk_path" "$apk_path"
+                mv -f "$aligned_apk_path" "$apk_path"
             else
                 notify msg "Realigning failed ($zipalign_output)\ncontinuing signing"
             fi
