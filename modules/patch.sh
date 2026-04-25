@@ -549,7 +549,7 @@ patchApp() {
                 BYTECODE_MODE_INFO="STRIP_SAFE ($GC_TYPE Optimized)"
                 ;;
             *)
-                BYTECODE_MODE_INFO="Disabled (Unknown GC Type)"
+                BYTECODE_MODE_INFO="Cli Default (Unknown GC Type)"
                 ;;
         esac
     else
