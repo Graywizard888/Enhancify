@@ -11,7 +11,7 @@
     "source": "De-Vanced",
     "repository": "RookieEnough/De-Vanced",
     "api": {
-      "json": "https://raw.githubusercontent.com/RookieEnough/De-ReVanced/refs/heads/dev/patches-list.json",
+      "json": "https://raw.githubusercontent.com/RookieEnough/De-Vanced/refs/heads/dev/patches-list.json",
       "version": null
     }
   },
