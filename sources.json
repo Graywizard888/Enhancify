@@ -59,7 +59,7 @@
     "source": "PikoTwitter",
     "repository": "crimera/piko",
     "api": {
-      "json": "https://raw.githubusercontent.com/crimera/piko/refs/heads/dev/patches-list.json",
+      "json": "",
       "version": null
     }
   },
