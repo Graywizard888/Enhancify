@@ -112,12 +112,7 @@ Optimize_Libs() {
     local build_status=0
     (
         cd "$TEMP_DIR" || exit 1
-        if [[ -f "resources.arsc" ]]; then
-            zip -qX -0 "../temp.apk" "resources.arsc" || exit 2
-            zip -qr -4 -X "../temp.apk" . -x "resources.arsc" || exit 2
-        else
-            zip -qr -4 -X "../temp.apk" . || exit 2
-        fi
+        zip -qr -4 -X -n .arsc "../temp.apk" . || exit 2
     )
     build_status=$?
 
@@ -127,35 +122,8 @@ Optimize_Libs() {
         return 1
     fi
 
-    notify info "Aligning APK with zipalign..."
-    sleep 1
-
-    local ZIPALIGN_PATH="$HOME/Enhancify/utils/zipalign"
-    if [[ ! -f "$ZIPALIGN_PATH" ]]; then
-        notify msg "zipalign not found!\nOperation aborted."
-        rm -rf "$TEMP_DIR" "$APP_DIR/temp.apk" 2>/dev/null
-        return 1
-    fi
-
-    if [[ ! -x "$ZIPALIGN_PATH" ]]; then
-        chmod +x "$ZIPALIGN_PATH" 2>/dev/null
-    fi
-
-    if [[ ! -x "$ZIPALIGN_PATH" ]]; then
-        notify msg "Failed to set execute permission on zipalign!\nOperation aborted."
-        rm -rf "$TEMP_DIR" "$APP_DIR/temp.apk" 2>/dev/null
-        return 1
-    fi
-
-    local aligned_apk="$APP_DIR/temp_aligned.apk"
-    if ! "$ZIPALIGN_PATH" -f -P 16 4 "$APP_DIR/temp.apk" "$aligned_apk" 2>/dev/null; then
-        notify msg "Failed to align APK with zipalign!\nOperation aborted."
-        rm -rf "$TEMP_DIR" "$APP_DIR/temp.apk" "$aligned_apk" 2>/dev/null
-        return 1
-    fi
-
-    mv -f "$aligned_apk" "$APP_PATH"
-    rm -rf "$TEMP_DIR" "$APP_DIR/temp.apk"
+    mv -f "$APP_DIR/temp.apk" "$APP_PATH"
+    rm -rf "$TEMP_DIR"
 
     local new_size
     new_size=$(stat -c %s "$APP_PATH")
