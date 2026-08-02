@@ -440,7 +440,54 @@ changeSource() {
     hint_text+="\n$status_line"
 
     tput civis 2>/dev/null
-    
+
+    local exit_code
+
+    if [ "$ENABLE_MULTIPATCHER" = "on" ]; then
+        local dialog_output
+        dialog_output=$(
+            "${DIALOG[@]}" \
+                --title '| Source Selection Menu |' \
+                --no-cancel \
+                --ok-label 'Confirm' \
+                --extra-button \
+                --extra-label 'Refresh' \
+                --separate-output \
+                --checklist "$hint_text\nSelect 1-3 sources to combine patches from." -1 -1 0 \
+                "${SOURCES_ITEMS[@]}" 2>&1 > /dev/tty
+        )
+        exit_code=$?
+
+        [ $exit_code -eq 3 ] && refresh_tags && changeSource && return
+
+        local -a selected_sources=()
+        [ -n "$dialog_output" ] && readarray -t selected_sources <<< "$dialog_output"
+
+        [ ${#selected_sources[@]} -eq 0 ] && return
+
+        if [ ${#selected_sources[@]} -gt 3 ]; then
+            notify msg "Please select up to 3 sources only.\nUsing the first 3 selected."
+            selected_sources=("${selected_sources[@]:0:3}")
+        fi
+
+        local prev_key new_key
+        prev_key=$(IFS='&'; echo "${MULTI_SOURCES[*]:-}")
+        new_key=$(IFS='&'; echo "${selected_sources[*]}")
+        [ -n "$prev_key" ] && [ "$prev_key" == "$new_key" ] && return
+
+        SOURCE="${selected_sources[0]}"
+        MULTI_SOURCES=("${selected_sources[@]}")
+        setEnv SOURCE "$SOURCE" update .config
+
+        rm -rf assets &> /dev/null
+        rm -rf patch &> /dev/null
+        rm -f "$CLI_DETECTION_FILE" &> /dev/null
+        mkdir assets
+
+        unset AVAILABLE_PATCHES APPS_INFO APPS_LIST ENABLED_PATCHES
+        return
+    fi
+
     SELECTED_SOURCE=$(
         "${DIALOG[@]}" \
             --title '| Source Selection Menu |' \
@@ -451,21 +498,21 @@ changeSource() {
             --radiolist "$hint_text" -1 -1 0 \
             "${SOURCES_ITEMS[@]}" 2>&1 > /dev/tty
     )
-    
-    local exit_code=$?
-    
+
+    exit_code=$?
+
     [ $exit_code -eq 3 ] && refresh_tags && changeSource && return
-    
+
     [ -z "$SELECTED_SOURCE" ] && return
     [ "$SOURCE" == "$SELECTED_SOURCE" ] && return
-    
+
     SOURCE="$SELECTED_SOURCE"
     setEnv SOURCE "$SOURCE" update .config
-    
+
     rm -rf assets &> /dev/null
     rm -rf patch &> /dev/null
     rm -f "$CLI_DETECTION_FILE" &> /dev/null
     mkdir assets
-    
+
     unset AVAILABLE_PATCHES APPS_INFO APPS_LIST ENABLED_PATCHES
 }

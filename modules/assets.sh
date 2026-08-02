@@ -464,13 +464,7 @@ update_sources_json() {
     done
 }
 
-showChangelog() {
-    local changelog_tmp="$HOME/Enhancify/changelog.tmp"
-    local changelog_display="$HOME/Enhancify/changelog_display.tmp"
-
-    [ ! -f "$changelog_tmp" ] && return 0
-    [ ! -s "$changelog_tmp" ] && rm -f "$changelog_tmp" && return 0
-
+getChangelogWrapWidth() {
     local term_cols
     if command -v tput &>/dev/null; then
         term_cols=$(tput cols 2>/dev/null)
@@ -486,23 +480,12 @@ showChangelog() {
 
     local wrap_width=$(( term_cols - 8 ))
     [ "$wrap_width" -lt 25 ] && wrap_width=25
+    echo "$wrap_width"
+}
 
-    local patches_size_display=""
-    if [ -n "$PATCHES_SIZE" ] && [ "$PATCHES_SIZE" != "0" ] 2>/dev/null; then
-        patches_size_display=$(numfmt --to=iec --format='%0.1f' "$PATCHES_SIZE")
-    elif [ "$PATCHES_SIZE" = "0" ]; then
-        patches_size_display="Unavailable"
-    fi
-
-    {
-        echo " SOURCE  : $SOURCE"
-        echo " Patches : ${PATCHES_VERSION}.${PATCHES_EXT}"
-        if [ -n "$patches_size_display" ]; then
-            echo " Size    : ${patches_size_display}"
-        fi
-        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-        echo ""
-    } > "$changelog_display"
+formatChangelogBody() {
+    local _input_file="$1"
+    local _wrap_width="$2"
 
     sed -E '
         s/\r//g
@@ -522,7 +505,7 @@ showChangelog() {
         s/^\* /  • /
         s/^- /  • /
         s/[[:space:]]+$//
-    ' "$changelog_tmp" | \
+    ' "$_input_file" | \
     awk '
         /^### / {
             sub(/^### /, "")
@@ -534,7 +517,7 @@ showChangelog() {
         { print }
     ' | \
     cat -s | \
-    awk -v width="$wrap_width" '
+    awk -v width="$_wrap_width" '
     {
         line = $0
 
@@ -582,11 +565,42 @@ showChangelog() {
             else        { print indent chunk }
         }
     }
-    ' >> "$changelog_display"
+    '
+}
+
+showChangelog() {
+    local _exit_label="${1:-Download}"
+    local changelog_tmp="$HOME/Enhancify/changelog.tmp"
+    local changelog_display="$HOME/Enhancify/changelog_display.tmp"
+
+    [ ! -f "$changelog_tmp" ] && return 0
+    [ ! -s "$changelog_tmp" ] && rm -f "$changelog_tmp" && return 0
+
+    local wrap_width
+    wrap_width=$(getChangelogWrapWidth)
+
+    local patches_size_display=""
+    if [ -n "$PATCHES_SIZE" ] && [ "$PATCHES_SIZE" != "0" ] 2>/dev/null; then
+        patches_size_display=$(numfmt --to=iec --format='%0.1f' "$PATCHES_SIZE")
+    elif [ "$PATCHES_SIZE" = "0" ]; then
+        patches_size_display="Unavailable"
+    fi
+
+    {
+        echo " SOURCE  : $SOURCE"
+        echo " Patches : ${PATCHES_VERSION}.${PATCHES_EXT}"
+        if [ -n "$patches_size_display" ]; then
+            echo " Size    : ${patches_size_display}"
+        fi
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+    } > "$changelog_display"
+
+    formatChangelogBody "$changelog_tmp" "$wrap_width" >> "$changelog_display"
 
     "${DIALOG[@]}" \
         --title '| Changelog |' \
-        --exit-label "Download" \
+        --exit-label "$_exit_label" \
         --scrollbar \
         --textbox "$changelog_display" -1 -1
 
@@ -666,7 +680,7 @@ resolve_cli_repo() {
             ;;
         *)
             if [ "$patches_ext" = "mpp" ]; then
-                echo "MorpheApp/morphe-cli"
+                echo "MorpheApp/morphe-desktop"
             else
                 echo "inotia00/revanced-cli"
             fi
@@ -1019,32 +1033,37 @@ fetchAssets() {
         [ -f "$f" ] && rm -f "$f"
     done
 
-    showChangelog
+    if [ "$ENABLE_MULTIPATCHER" = "on" ] && [ "${#MULTI_SOURCES[@]}" -gt 1 ]; then
+        fetchMultiSourceAssets || return 1
+    else
+        showChangelog
 
-    local -a dl_urls dl_dirs dl_files dl_sizes dl_labels
-    collectPendingDownloads
+        local -a dl_urls dl_dirs dl_files dl_sizes dl_labels
+        collectPendingDownloads
 
-    if [ ${#dl_urls[@]} -gt 0 ]; then
-        if [ "$DISABLE_NETWORK_ACCELERATION" != "on" ]; then
-            downloadBatchAria2c dl_urls dl_dirs dl_files dl_sizes dl_labels || return 1
-        else
-            downloadSequentialWget dl_urls dl_dirs dl_files dl_sizes dl_labels || return 1
+        if [ ${#dl_urls[@]} -gt 0 ]; then
+            if [ "$ENABLE_MULTIPATCHER" = "on" ] || [ "$DISABLE_NETWORK_ACCELERATION" != "on" ]; then
+                downloadBatchAria2c dl_urls dl_dirs dl_files dl_sizes dl_labels || return 1
+            else
+                downloadSequentialWget dl_urls dl_dirs dl_files dl_sizes dl_labels || return 1
+            fi
         fi
-    fi
 
-    if [ "$CACHE_CLI" = "on" ]; then
-        local cli_actual_size
-        cli_actual_size=$(stat -c %s "$CLI_FILE" 2>/dev/null)
-        local cli_size_ok=false
-        if [ "$CLI_SIZE" = "0" ]; then
-            [ -f "$CLI_FILE" ] && [ -s "$CLI_FILE" ] && cli_size_ok=true
-        else
-            [ "$CLI_SIZE" = "$cli_actual_size" ] && cli_size_ok=true
+        if [ "$CACHE_CLI" = "on" ]; then
+            local cli_actual_size
+            cli_actual_size=$(stat -c %s "$CLI_FILE" 2>/dev/null)
+            local cli_size_ok=false
+            if [ "$CLI_SIZE" = "0" ]; then
+                [ -f "$CLI_FILE" ] && [ -s "$CLI_FILE" ] && cli_size_ok=true
+            else
+                [ "$CLI_SIZE" = "$cli_actual_size" ] && cli_size_ok=true
+            fi
+            [ "$cli_size_ok" = true ] && save_cli_to_cache "$SOURCE" "$CLI_VERSION" "$CLI_FILE"
         fi
-        [ "$cli_size_ok" = true ] && save_cli_to_cache "$SOURCE" "$CLI_VERSION" "$CLI_FILE"
     fi
 
     ASSETS_FETCHED=true
+
     parsePatchesJson || return 1
 }
 

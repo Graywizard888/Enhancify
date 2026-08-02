@@ -632,9 +632,9 @@ bundleParser() {
     local CLI_API_URL
     if [ "$PATCHES_EXT" == "mpp" ]; then
         if [ "$USE_PRE_RELEASE" == "on" ]; then
-            CLI_API_URL="https://api.github.com/repos/MorpheApp/morphe-cli/releases"
+            CLI_API_URL="https://api.github.com/repos/MorpheApp/morphe-desktop/releases"
         else
-            CLI_API_URL="https://api.github.com/repos/MorpheApp/morphe-cli/releases/latest"
+            CLI_API_URL="https://api.github.com/repos/MorpheApp/morphe-desktop/releases/latest"
         fi
     else
         if [ "$USE_PRE_RELEASE" == "on" ]; then

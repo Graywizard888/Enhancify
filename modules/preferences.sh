@@ -50,9 +50,10 @@ configure() {
 
 toggle_options() {
     local CONFIG_OPTS UPDATED_CONFIG THEME
-    CONFIG_OPTS=("GREEN_THEME" "$GREEN_THEME" "PREFER_SPLIT_APK" "$PREFER_SPLIT_APK" "OPTIMIZE_LIBS" "$OPTIMIZE_LIBS" "LAUNCH_APP_AFTER_MOUNT" "$LAUNCH_APP_AFTER_MOUNT" "ALLOW_APP_VERSION_DOWNGRADE" "$ALLOW_APP_VERSION_DOWNGRADE" "USE_PRE_RELEASE" "$USE_PRE_RELEASE" "DISABLE_NETWORK_ACCELERATION" "$DISABLE_NETWORK_ACCELERATION" "Use_CUSTOM_KEYSTORE" "$Use_CUSTOM_KEYSTORE" "CLI_RIPLIB_ANTISPLIT" "$CLI_RIPLIB_ANTISPLIT" "USE_PARALLEL_GC" "$USE_PARALLEL_GC" "CACHE_CLI" "$CACHE_CLI")
+    CONFIG_OPTS=("GREEN_THEME" "$GREEN_THEME" "PREFER_SPLIT_APK" "$PREFER_SPLIT_APK" "OPTIMIZE_LIBS" "$OPTIMIZE_LIBS" "LAUNCH_APP_AFTER_MOUNT" "$LAUNCH_APP_AFTER_MOUNT" "ALLOW_APP_VERSION_DOWNGRADE" "$ALLOW_APP_VERSION_DOWNGRADE" "USE_PRE_RELEASE" "$USE_PRE_RELEASE" "DISABLE_NETWORK_ACCELERATION" "$DISABLE_NETWORK_ACCELERATION" "Use_CUSTOM_KEYSTORE" "$Use_CUSTOM_KEYSTORE" "CLI_RIPLIB_ANTISPLIT" "$CLI_RIPLIB_ANTISPLIT" "USE_PARALLEL_GC" "$USE_PARALLEL_GC" "CACHE_CLI" "$CACHE_CLI" "ENABLE_MULTIPATCHER" "$ENABLE_MULTIPATCHER")
 
     local PREVIOUS_PRE_RELEASE="$USE_PRE_RELEASE"
+    local PREVIOUS_MULTIPATCHER="$ENABLE_MULTIPATCHER"
 
     readarray -t UPDATED_CONFIG < <(
         "${DIALOG[@]}" \
@@ -77,6 +78,7 @@ toggle_options() {
     sed -i "s|^CLI_RIPLIB_ANTISPLIT='on'|CLI_RIPLIB_ANTISPLIT='off'|" .config
     sed -i "s|^USE_PARALLEL_GC='on'|USE_PARALLEL_GC='off'|" .config
     sed -i "s|^CACHE_CLI='on'|CACHE_CLI='off'|" .config
+    sed -i "s|^ENABLE_MULTIPATCHER='on'|ENABLE_MULTIPATCHER='off'|" .config
 
     for CONFIG_OPT in "${UPDATED_CONFIG[@]}"; do
         setEnv "$CONFIG_OPT" on update .config
@@ -86,6 +88,10 @@ toggle_options() {
 
     if [[ "$USE_PRE_RELEASE" == "on" && "$PREVIOUS_PRE_RELEASE" == "off" ]]; then
         notify msg "WARNING: \nPre-release patches are enabled. \nThis Patches Are Under Development And Can Cause Issues While Patching And App Runtime"
+    fi
+
+    if [[ "$ENABLE_MULTIPATCHER" == "on" && "$PREVIOUS_MULTIPATCHER" == "off" ]]; then
+        notify msg "WARNING: \nMulti-Patcher is an experimental feature. \nCombining patches from multiple sources may cause issues while patching or at app runtime."
     fi
 
     [ "$GREEN_THEME" == "on" ] && THEME="GREEN" || THEME="DARK"

@@ -2,6 +2,8 @@
 
 initiateWorkflow() {
     TASK="CHANGE_SOURCE"
+    MULTI_SOURCES=()
+    MULTI_PATCHES_FILES=()
     while true; do
         case "$TASK" in
             "CHANGE_SOURCE")

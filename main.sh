@@ -13,6 +13,7 @@ main() {
     setEnv USE_PARALLEL_GC "off" init .config
     setEnv FORCE_BACKGROUND_WHITELIST "off" init .config
     setEnv CACHE_CLI "off" init .config
+    setEnv ENABLE_MULTIPATCHER "off" init .config
     source .config
 
     mkdir -p "assets" "apps" "$STORAGE" "$STORAGE/Patched" "$STORAGE/GmsCore"

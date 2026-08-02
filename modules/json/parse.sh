@@ -1,6 +1,11 @@
 #!/usr/bin/bash
 
 parsePatchesJson() {
+    if [ "$ENABLE_MULTIPATCHER" = "on" ] && [ "${#MULTI_SOURCES[@]}" -gt 1 ]; then
+        parseMultiSourcePatchesJson
+        return $?
+    fi
+
     while [ ! -e "assets/$SOURCE/Patches-$PATCHES_VERSION.json" ]; do
         if [ -n "$JSON_URL" ]; then
             parseJsonFromAPI
@@ -12,7 +17,7 @@ parsePatchesJson() {
 
     [ -n "$AVAILABLE_PATCHES" ] || AVAILABLE_PATCHES=$(jq -rc '.' "assets/$SOURCE/Patches-$PATCHES_VERSION.json")
 
-    [ -n "$ENABLED_PATCHES" ] || ENABLED_PATCHES=$(jq -erc '.' "$STORAGE/$SOURCE-patches.json" 2> /dev/null || echo '[]')
+    [ -n "$ENABLED_PATCHES" ] || ENABLED_PATCHES=$(jq -erc '.' "$STORAGE/$(_get_patches_storage_key)-patches.json" 2> /dev/null || echo '[]')
 
     while [ -z "$APPS_LIST" ]; do
         if [ -e "assets/$SOURCE/Apps-$PATCHES_VERSION.json" ]; then

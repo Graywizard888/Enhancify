@@ -59,12 +59,18 @@ hasCustomKeystore() {
 }
 
 hasMppPatches() {
-    [[ ! -d "assets/$SOURCE" ]] && return 1
+    if [ "$ENABLE_MULTIPATCHER" = "on" ] && [ "${#MULTI_PATCHES_FILES[@]}" -gt 0 ]; then
+        local pf
+        for pf in "${MULTI_PATCHES_FILES[@]}"; do
+            [[ "$pf" == *.mpp ]] && return 0
+        done
+        return 1
+    fi
 
+    [[ ! -d "assets/$SOURCE" ]] && return 1
     local MPP_FILES
     MPP_FILES=$(ls "assets/$SOURCE"/Patches-*.mpp 2>/dev/null)
     [[ -z "$MPP_FILES" ]] && return 1
-
     return 0
 }
 
@@ -385,7 +391,8 @@ writeLogHeader() {
         "║ App Version       : $APP_VER" \
         "║ Package           : $PKG_NAME" \
         "║ CLI               : $CLI_FILE" \
-        "║ Patches           : $PATCHES_FILE" >&"$fd"
+        "║ Patches           : $PATCHES_FILE" \
+        "║ Multi-Patcher     : ${ENABLE_MULTIPATCHER:-off} (sources: ${MULTI_SOURCES[*]:-N/A})" >&"$fd"
 
     printf '%s\n' \
         "╠═══════════════════════════════════════════════════════════════╣" \
@@ -562,41 +569,48 @@ patchApp() {
         VERIFICATION_INFO="Force Signature Verification Bypassed"
     fi
 
-    readarray -t ARGUMENTS < <(
-        jq -nrc --arg PKG_NAME "$PKG_NAME" --argjson ENABLED_PATCHES "$ENABLED_PATCHES" '
-            $ENABLED_PATCHES[] |
-            select(.pkgName == $PKG_NAME) |
-            .options as $OPTIONS |
-            .patches[] |
-            . as $PATCH_NAME |
-            "--enable",
-            $PATCH_NAME,
-            (
-                $OPTIONS[] |
-                if .patchName == $PATCH_NAME then
-                    "--options=" +
-                    .key + "=" +
-                    (
-                        .value |
-                        if . != null then
-                            . | tostring
-                        else
-                            empty
-                        end
-                    )
-                else
-                    empty
-                end
-            )
-        '
-    )
+    local PATCHES_ARGS=()
+    if [ "$ENABLE_MULTIPATCHER" = "on" ] && [ "${#MULTI_PATCHES_FILES[@]}" -gt 0 ]; then
+        buildMultiPatchArguments
+    else
+        readarray -t ARGUMENTS < <(
+            jq -nrc --arg PKG_NAME "$PKG_NAME" --argjson ENABLED_PATCHES "$ENABLED_PATCHES" '
+                $ENABLED_PATCHES[] |
+                select(.pkgName == $PKG_NAME) |
+                .options as $OPTIONS |
+                .patches[] |
+                . as $PATCH_NAME |
+                "--enable",
+                $PATCH_NAME,
+                (
+                    $OPTIONS[] |
+                    if .patchName == $PATCH_NAME then
+                        "--options=" +
+                        .key + "=" +
+                        (
+                            .value |
+                            if . != null then
+                                . | tostring
+                            else
+                                empty
+                            end
+                        )
+                    else
+                        empty
+                    end
+                )
+            '
+        )
+        PATCHES_ARGS=("--patches=$PATCHES_FILE")
+    fi
 
     writeLogHeader "$STORAGE/patch_log.txt"
 
     java \
         "${JAVA_ARGS[@]}" \
         -jar "$CLI_FILE" patch \
-        --force --exclusive --patches="$PATCHES_FILE" \
+        --force --exclusive \
+        "${PATCHES_ARGS[@]}" \
         --out="$OUTPUT_PATH" \
         "${SIGNING_ARGS[@]}" \
         "${VERIFICATION_ARGS[@]}" \
