@@ -112,7 +112,7 @@ Optimize_Libs() {
     local build_status=0
     (
         cd "$TEMP_DIR" || exit 1
-        zip -qr -4 -X "../temp.apk" . || exit 2
+        zip -qr -4 -X -n .arsc "../temp.apk" . || exit 2
     )
     build_status=$?
 
