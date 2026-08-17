@@ -1,5 +1,7 @@
 #!/usr/bin/bash
 
+rish_c() { rish -c "$@" | grep -v "^Entering shell\.\.\."; }
+
 applyBackgroundWhitelist() {
     local PKG="$1"
 
@@ -21,18 +23,18 @@ applyBackgroundWhitelist() {
     log "Applying background whitelist for $PKG..."
 
     local WL_OUTPUT
-    WL_OUTPUT=$(rish -c "cmd deviceidle whitelist +$PKG" 2>&1)
+    WL_OUTPUT=$(rish_c "cmd deviceidle whitelist +$PKG" 2>&1)
     log "deviceidle whitelist output: $WL_OUTPUT"
 
     local RIB_OUTPUT
-    RIB_OUTPUT=$(rish -c "cmd appops set $PKG RUN_IN_BACKGROUND allow" 2>&1)
+    RIB_OUTPUT=$(rish_c "cmd appops set $PKG RUN_IN_BACKGROUND allow" 2>&1)
     log "appops RUN_IN_BACKGROUND output: $RIB_OUTPUT"
 
     local RAIB_OUTPUT
-    RAIB_OUTPUT=$(rish -c "cmd appops set $PKG RUN_ANY_IN_BACKGROUND allow" 2>&1)
+    RAIB_OUTPUT=$(rish_c "cmd appops set $PKG RUN_ANY_IN_BACKGROUND allow" 2>&1)
     log "appops RUN_ANY_IN_BACKGROUND output: $RAIB_OUTPUT"
 
-    if rish -c "cmd deviceidle whitelist" 2>/dev/null | grep -q "$PKG"; then
+    if rish_c "cmd deviceidle whitelist" 2>/dev/null | grep -q "$PKG"; then
         log "Background whitelist: $PKG confirmed in device-idle whitelist."
         return 0
     else
@@ -70,7 +72,7 @@ runDexOptimization() {
     
     log "Executing: cmd package compile -m $PROFILE_MODE $FORCE_FLAG $PKG"
     local OPT_OUTPUT
-    OPT_OUTPUT=$(rish -c "cmd package compile -m $PROFILE_MODE $FORCE_FLAG $PKG" 2>&1)
+    OPT_OUTPUT=$(rish_c "cmd package compile -m $PROFILE_MODE $FORCE_FLAG $PKG" 2>&1)
     local OPT_EXIT_CODE=$?
     
     log "Optimization output: $OPT_OUTPUT"
@@ -82,7 +84,7 @@ runDexOptimization() {
         if [ "$INSTALL_TYPE" == "update" ]; then
             log "Executing force-stop for updated app: $PKG"
             local FORCE_STOP_OUTPUT
-            FORCE_STOP_OUTPUT=$(rish -c "am force-stop $PKG" 2>&1)
+            FORCE_STOP_OUTPUT=$(rish_c "am force-stop $PKG" 2>&1)
             log "Force-stop output: $FORCE_STOP_OUTPUT"
             log "Force-stop completed for $PKG after speed optimization"
         fi
@@ -105,7 +107,7 @@ runDexOptimization() {
         if [ "$INSTALL_TYPE" == "update" ]; then
             log "Executing force-stop for updated app: $PKG"
             local FORCE_STOP_OUTPUT
-            FORCE_STOP_OUTPUT=$(rish -c "am force-stop $PKG" 2>&1)
+            FORCE_STOP_OUTPUT=$(rish_c "am force-stop $PKG" 2>&1)
             log "Force-stop output: $FORCE_STOP_OUTPUT"
             log "Force-stop completed for $PKG after speed optimization"
         fi
@@ -157,7 +159,7 @@ installAppRish() {
     cp -f "apps/$APP_NAME/$APP_VER-$SOURCE.apk" "$STORAGE/Patched/$EXPORTED_APK_NAME.apk" &> /dev/null
 
     log "Checking if $PATCHED_APP_PKG_NAME is installed"
-    local INSTALLED_PATCHED_VERSION=$(rish -c "dumpsys package $PATCHED_APP_PKG_NAME" | sed -n '/versionName/s/.*=//p' | sed -n '1p')
+    local INSTALLED_PATCHED_VERSION=$(rish_c "dumpsys package $PATCHED_APP_PKG_NAME" | sed -n '/versionName/s/.*=//p' | sed -n '1p')
 
     if [ "$INSTALLED_PATCHED_VERSION" != "" ]; then
         INSTALL_TYPE="update"
@@ -165,10 +167,10 @@ installAppRish() {
         log "Install type determined: UPDATE"
         log "Verifying signatures..."
         local STOCK_APP_PATH
-        if [ "$(rish -c "pm list packages --user current | grep -q $PATCHED_APP_PKG_NAME && echo Installed")" == "Installed" ]; then
-            STOCK_APP_PATH=$(rish -c "pm path --user current $PATCHED_APP_PKG_NAME | sed -n '/base/s/package://p'")
+        if [ "$(rish_c "pm list packages --user current | grep -q $PATCHED_APP_PKG_NAME && echo Installed")" == "Installed" ]; then
+            STOCK_APP_PATH=$(rish_c "pm path --user current $PATCHED_APP_PKG_NAME | sed -n '/base/s/package://p'")
         else
-            STOCK_APP_PATH=$(rish -c "dumpsys package $PATCHED_APP_PKG_NAME | sed -n 's/^[[:space:]]*path: \(.*base\.apk\)/\1/p'")
+            STOCK_APP_PATH=$(rish_c "dumpsys package $PATCHED_APP_PKG_NAME | sed -n 's/^[[:space:]]*path: \(.*base\.apk\)/\1/p'")
             log "Dumpsys used to get stock app path, that means the app is installed but in a different user."
             HIDDEN_APP_INSTALL=true
         fi
@@ -231,7 +233,7 @@ installAppRish() {
         notify info "Please Wait !!\nUninstalling $PATCHED_APP_APP_NAME using Rish..."
         if uninstallAppRish false true "$STORAGE"; then
             log "Uninstallation successful, proceeding with installation."
-            if ! rish -c "dumpsys package $PATCHED_APP_PKG_NAME" 2>&1 | grep -q "Unable to find package"; then
+            if ! rish_c "dumpsys package $PATCHED_APP_PKG_NAME" 2>&1 | grep -q "Unable to find package"; then
                 log "Found hidden installation post uninstallation. This might be a different user."
                 HIDDEN_APP_INSTALL=true
             fi
@@ -339,7 +341,7 @@ installAppRish() {
     
     log "Installation of $PATCHED_APP_APP_NAME $PATCHED_APP_VERSION completed successfully, finalized code."
     if [ "$LAUNCH_APP_AFTER_MOUNT" == "on" ]; then
-        rish -c "settings list secure | sed -n -e 's/\/.*//' -e 's/default_input_method=//p' | xargs am force-stop && pm resolve-activity --brief $PKG_NAME | tail -n 1 | xargs am start -n && am force-stop com.termux"  &> /dev/null
+        rish_c "settings list secure | sed -n -e 's/\/.*//' -e 's/default_input_method=//p' | xargs am force-stop && pm resolve-activity --brief $PKG_NAME | tail -n 1 | xargs am start -n && am force-stop com.termux"  &> /dev/null
     fi
     return 0
 }
