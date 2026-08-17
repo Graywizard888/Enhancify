@@ -669,7 +669,12 @@ fetchSrc() {
 
     print_info "Checking latest release..."
 
-    TAG=$(curl -s 'https://api.github.com/repos/Graywizard888/Enhancify/releases/latest' 2> /dev/null | jq -r '.tag_name')
+    TAG=$(curl -s 'https://api.github.com/repos/jairjacom/Enhancify/releases/latest' 2> /dev/null | jq -r '.tag_name')
+
+    if [ -z "$TAG" ] || [ "$TAG" == "null" ]; then
+        print_info "No releases found in fork, skipping update check"
+        return
+    fi
 
     if [ "$TAG" == "$VERSION" ]; then
         print_success "You're running the latest version ${GREEN}($VERSION)${RESET}"
@@ -684,7 +689,7 @@ fetchSrc() {
 
     print_info "Installing update..."
 
-    downloadFile "https://github.com/Graywizard888/Enhancify/archive/refs/tags/$TAG.zip" "$TAG.zip"
+    downloadFile "https://github.com/jairjacom/Enhancify/archive/refs/tags/$TAG.zip" "$TAG.zip"
 
     if [ -e "$TAG.zip" ]; then
         unzip -qo "$TAG.zip"
@@ -717,7 +722,7 @@ echo ""
 
 [ -e "$SRC/.info" ] && source "$SRC/.info"
 if [ "$INTERNET_ACCESS" != false ] && ping -c 1 -W 2 github.com &> /dev/null; then
-    TAG=$(curl -s --connect-timeout 5 'https://api.github.com/repos/Graywizard888/Enhancify/releases/latest' 2>/dev/null | jq -r '.tag_name' 2>/dev/null)
+    TAG=$(curl -s --connect-timeout 5 'https://api.github.com/repos/jairjacom/Enhancify/releases/latest' 2>/dev/null | jq -r '.tag_name' 2>/dev/null)
     if [ -n "$TAG" ] && [ "$TAG" != "null" ] && [ "$TAG" != "$VERSION" ]; then
         UPDATE_AVAILABLE=true
     fi
