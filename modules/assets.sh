@@ -456,6 +456,7 @@ update_sources_json() {
         "AmpleRevanced:main:dev"
         "Paresh-Patches:main:dev"
         "brossh:main:dev"
+        "rushiranpise:main:dev"
     )
 
     for config in "${sources_config[@]}"; do
