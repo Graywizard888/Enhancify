@@ -6,8 +6,6 @@ fetchAppsInfo() {
 
     notify info "Fetching apps info from apkmirror.com..."
 
-    # apkmirror's app_exists API rejects requests with more than 100 pnames,
-    # so large patch sets (e.g. rushiranpise) must be queried in batches.
     PKG_NAMES=$(jq -c '[.[] | .pkgName | select(. != null)]' <<< "$AVAILABLE_PATCHES")
     TOTAL=$(jq 'length' <<< "$PKG_NAMES")
     RESPONSE_JSON="[]"
@@ -84,7 +82,7 @@ fetchAppsInfo() {
             --yesno "API request failed for apkmirror.com.\nTry again later... or\nDo you want to import app anyway?" 12 45
 
         case $? in
-            0)  # User selected Yes
+            0) 
                 TASK="IMPORT_APP"
                 while true; do
                     case "$TASK" in
@@ -123,7 +121,7 @@ fetchAppsInfo() {
                     esac
                 done
                 ;;
-            *)  # User selected No or exited
+            *) 
                 return 1
                 ;;
         esac
