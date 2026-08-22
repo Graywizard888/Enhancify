@@ -456,6 +456,7 @@ update_sources_json() {
         "AmpleRevanced:main:dev"
         "Paresh-Patches:main:dev"
         "brossh:main:dev"
+        "rushiranpise:main:dev"
     )
 
     for config in "${sources_config[@]}"; do
@@ -944,7 +945,8 @@ fetchAssetsInfo() {
                     .assets[] |
                     select(
                         (.name | endswith(".asc")  | not) and
-                        (.name | endswith(".json") | not)
+                        (.name | endswith(".json") | not) and
+                        (.name | ascii_downcase | test("sha256|sha1|md5|checksum") | not)
                     ) |
                     if (.name | endswith("." + $ext)) then
                         "PATCHES_URL='\''\(.browser_download_url)'\''",

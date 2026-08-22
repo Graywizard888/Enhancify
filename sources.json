@@ -91,7 +91,15 @@
     "source": "brossh",
     "repository": "brosssh/morphe-patches",
     "api": {
-      "json": "https://raw.githubusercontent.com/brosssh/morphe-patches/refs/heads/main/patches-list.json",
+      "json": "https://raw.githubusercontent.com/brosssh/morphe-patches/refs/heads/dev/patches-list.json",
+      "version": null
+    }
+  },
+  {
+    "source": "rushiranpise",
+    "repository": "rushiranpise/morphe-patches",
+    "api": {
+      "json": "https://raw.githubusercontent.com/rushiranpise/morphe-patches/refs/heads/main/patches-list.json",
       "version": null
     }
   }

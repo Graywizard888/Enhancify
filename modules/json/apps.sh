@@ -1,53 +1,56 @@
 #!/usr/bin/bash
 
 fetchAppsInfo() {
-    local RESPONSE_JSON
+    local RESPONSE_JSON PKG_NAMES BATCH_JSON BATCH_RESPONSE
+    local -i TOTAL BATCH_SIZE=100 IDX=0 HAD_FAILURE=0
 
     notify info "Fetching apps info from apkmirror.com..."
 
-    if RESPONSE_JSON=$(
-        "${CURL[@]}" 'https://www.apkmirror.com/wp-json/apkm/v1/app_exists/' \
-            -A "$USER_AGENT" \
-            -H 'Accept: application/json' \
-            -H 'Content-Type: application/json' \
-            -H 'Authorization: Basic YXBpLXRvb2xib3gtZm9yLWdvb2dsZS1wbGF5OkNiVVcgQVVMZyBNRVJXIHU4M3IgS0s0SCBEbmJL' \
-            -d "$(jq -nr --argjson AVAILABLE_PATCHES "$AVAILABLE_PATCHES" '
-                    {
-                        "pnames": (
-                            $AVAILABLE_PATCHES |
-                            map(
-                                .pkgName |
-                                if . != null then
-                                    .
-                                else
-                                    empty
-                                end
-                            )
-                        )
-                    }
-                ')" |
-            jq -c '
-                reduce .data[] as {
-                    pname: $PKG_NAME,
-                    exists: $EXISTS,
-                    app: {
-                        name: $APP_NAME,
-                        link: $APP_URL
-                    }
-                } (
-                    [];
-                    if $EXISTS then
-                        . += [{
-                            "pkgName": $PKG_NAME,
-                            "appName": $APP_NAME,
-                            "appUrl": $APP_URL
-                        }]
-                    else
-                        .
-                    end
-                )
-            ' 2> /dev/null
-    ); then
+    PKG_NAMES=$(jq -c '[.[] | .pkgName | select(. != null)]' <<< "$AVAILABLE_PATCHES")
+    TOTAL=$(jq 'length' <<< "$PKG_NAMES")
+    RESPONSE_JSON="[]"
+
+    while [ "$IDX" -lt "$TOTAL" ]; do
+        BATCH_JSON=$(jq -c --argjson i "$IDX" --argjson n "$BATCH_SIZE" '.[$i:($i+$n)]' <<< "$PKG_NAMES")
+
+        if BATCH_RESPONSE=$(
+            "${CURL[@]}" 'https://www.apkmirror.com/wp-json/apkm/v1/app_exists/' \
+                -A "$USER_AGENT" \
+                -H 'Accept: application/json' \
+                -H 'Content-Type: application/json' \
+                -H 'Authorization: Basic YXBpLXRvb2xib3gtZm9yLWdvb2dsZS1wbGF5OkNiVVcgQVVMZyBNRVJXIHU4M3IgS0s0SCBEbmJL' \
+                -d "$(jq -nc --argjson PNAMES "$BATCH_JSON" '{"pnames": $PNAMES}')" |
+                jq -c '
+                    reduce .data[] as {
+                        pname: $PKG_NAME,
+                        exists: $EXISTS,
+                        app: {
+                            name: $APP_NAME,
+                            link: $APP_URL
+                        }
+                    } (
+                        [];
+                        if $EXISTS then
+                            . += [{
+                                "pkgName": $PKG_NAME,
+                                "appName": $APP_NAME,
+                                "appUrl": $APP_URL
+                            }]
+                        else
+                            .
+                        end
+                    )
+                ' 2> /dev/null
+        ); then
+            RESPONSE_JSON=$(jq -c -n --argjson acc "$RESPONSE_JSON" --argjson batch "$BATCH_RESPONSE" '$acc + $batch' 2> /dev/null)
+        else
+            HAD_FAILURE=1
+        fi
+
+        IDX+=BATCH_SIZE
+    done
+
+    if [ "$HAD_FAILURE" -eq 0 ] || [ "$RESPONSE_JSON" != "[]" ]; then
         rm assets/"$SOURCE"/Apps-*.json &> /dev/null
 
         echo "$RESPONSE_JSON" |
@@ -79,7 +82,7 @@ fetchAppsInfo() {
             --yesno "API request failed for apkmirror.com.\nTry again later... or\nDo you want to import app anyway?" 12 45
 
         case $? in
-            0)  # User selected Yes
+            0) 
                 TASK="IMPORT_APP"
                 while true; do
                     case "$TASK" in
@@ -118,7 +121,7 @@ fetchAppsInfo() {
                     esac
                 done
                 ;;
-            *)  # User selected No or exited
+            *) 
                 return 1
                 ;;
         esac
