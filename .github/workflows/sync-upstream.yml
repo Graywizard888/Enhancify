@@ -1,0 +1,154 @@
+name: Sync with Upstream
+
+on:
+  schedule:
+    - cron: '0 9 * * *'  # Daily at 9 AM UTC
+  workflow_dispatch:      # Manual trigger from GitHub Actions tab
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  sync:
+    name: Check and sync Graywizard upstream
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout fork (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure git identity
+        run: |
+          git config user.email "jjaco72@gmail.com"
+          git config user.name "jairjacom"
+
+      - name: Add upstream and fetch
+        run: |
+          git remote add upstream https://github.com/Graywizard888/Enhancify.git
+          git fetch upstream --tags
+
+      - name: Get upstream latest release tag
+        id: upstream
+        run: |
+          TAG=$(curl -sf https://api.github.com/repos/Graywizard888/Enhancify/releases/latest | jq -r '.tag_name // empty')
+          if [ -z "$TAG" ] || [ "$TAG" = "null" ]; then
+            echo "No upstream release found — skipping"
+            echo "tag=" >> $GITHUB_OUTPUT
+          else
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+            echo "Upstream latest: $TAG"
+          fi
+
+      - name: Get fork latest release tag
+        id: fork
+        run: |
+          TAG=$(curl -sf https://api.github.com/repos/jairjacom/Enhancify/releases/latest | jq -r '.tag_name // empty')
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "Fork latest: $TAG"
+
+      - name: Check if sync is needed
+        id: check
+        run: |
+          UPSTREAM="${{ steps.upstream.outputs.tag }}"
+          FORK="${{ steps.fork.outputs.tag }}"
+          if [ -z "$UPSTREAM" ]; then
+            echo "needed=false" >> $GITHUB_OUTPUT
+            echo "Upstream has no release — nothing to do"
+          elif [ "$UPSTREAM" = "$FORK" ]; then
+            echo "needed=false" >> $GITHUB_OUTPUT
+            echo "Already at $FORK — nothing to do"
+          else
+            echo "needed=true" >> $GITHUB_OUTPUT
+            echo "New upstream version detected: $UPSTREAM (fork has $FORK)"
+          fi
+
+      - name: Attempt merge with upstream
+        if: steps.check.outputs.needed == 'true'
+        id: merge
+        run: |
+          git checkout main
+          if git merge upstream/main --no-edit; then
+            echo "success=true" >> $GITHUB_OUTPUT
+            echo "Merge clean"
+          else
+            git merge --abort
+            echo "success=false" >> $GITHUB_OUTPUT
+            echo "Merge conflict detected"
+          fi
+
+      - name: Check tag does not already exist
+        if: steps.check.outputs.needed == 'true' && steps.merge.outputs.success == 'true'
+        id: tagcheck
+        run: |
+          TAG="${{ steps.upstream.outputs.tag }}"
+          if git ls-remote --tags origin "$TAG" | grep -q "$TAG"; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "Tag $TAG already on fork — skipping tag push"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Push main and create tag
+        if: steps.check.outputs.needed == 'true' && steps.merge.outputs.success == 'true' && steps.tagcheck.outputs.exists == 'false'
+        run: |
+          git push origin main
+          git tag ${{ steps.upstream.outputs.tag }}
+          git push origin ${{ steps.upstream.outputs.tag }}
+
+      - name: Create GitHub release
+        if: steps.check.outputs.needed == 'true' && steps.merge.outputs.success == 'true' && steps.tagcheck.outputs.exists == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.upstream.outputs.tag }}
+          name: Enhancify ${{ steps.upstream.outputs.tag }}
+          body: |
+            ## Enhancify ${{ steps.upstream.outputs.tag }}
+
+            Auto-synced from upstream [Graywizard888/Enhancify](https://github.com/Graywizard888/Enhancify).
+            Fork maintained by [@jairjacom](https://github.com/jairjacom).
+
+            ### Fork changes included
+            - rish banner fix: strips "Entering shell..." from Shizuku output (thedjchi fork, Android 17 / Pixel 9 Pro XL)
+
+            ### Install
+            ```bash
+            pkg update && pkg upgrade -y && pkg install git -y && termux-setup-storage && git clone https://github.com/jairjacom/Enhancify.git && cd Enhancify && bash install.sh
+            ```
+
+      - name: Open issue on merge conflict
+        if: steps.check.outputs.needed == 'true' && steps.merge.outputs.success == 'false'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '⚠️ Manual sync needed — upstream ${{ steps.upstream.outputs.tag }} has conflicts',
+              body: [
+                '## Auto-sync failed: merge conflict detected',
+                '',
+                'Upstream **Graywizard888/Enhancify** released **${{ steps.upstream.outputs.tag }}** but it could not merge cleanly into this fork.',
+                '',
+                'This usually means Graywizard modified one of the 4 rish fix files:',
+                '- `modules/system/rish.sh`',
+                '- `modules/system/root.sh`',
+                '- `system/rish-install.sh`',
+                '- `system/rish-uninstall.sh`',
+                '',
+                '### Steps to fix manually',
+                '```bash',
+                'cd ~/projects/Enhancify',
+                'git fetch upstream',
+                'git merge upstream/main',
+                '# resolve conflicts — keep rish_c() wrapper in each file',
+                'git push origin main',
+                'git tag ${{ steps.upstream.outputs.tag }} && git push origin ${{ steps.upstream.outputs.tag }}',
+                '```',
+                '',
+                `[Failed workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`
+              ].join('\n')
+            });
