@@ -1,0 +1,42 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Get version from tag
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.VERSION }}
+          name: Enhancify ${{ steps.version.outputs.VERSION }}
+          body: |
+            ## Enhancify ${{ steps.version.outputs.VERSION }}
+
+            Fork maintained by [@jairjacom](https://github.com/jairjacom).
+
+            ### Changes in this fork
+            - rish banner fix: strips "Entering shell..." output from Shizuku (thedjchi fork, Android 17 dev) so Rish mode works correctly on Pixel 9 Pro XL
+
+            ### Install
+            ```bash
+            pkg update && pkg upgrade -y && pkg install git -y && termux-setup-storage && git clone https://github.com/jairjacom/Enhancify.git && cd Enhancify && bash install.sh
+            ```
+          draft: false
+          prerelease: false

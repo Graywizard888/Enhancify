@@ -38,7 +38,7 @@ get_version() {
 
 fetch_changelog() {
     local version="$1"
-    local repo="Graywizard888/Enhancify"
+    local repo="jairjacom/Enhancify"
     local temp_file="$HOME/Enhancify/changelog.json"
 
     if [ "$version" = "Not Found" ]; then
