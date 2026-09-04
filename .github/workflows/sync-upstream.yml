@@ -8,7 +8,6 @@ on:
 permissions:
   contents: write
   issues: write
-  workflows: write
 
 jobs:
   sync:
@@ -72,7 +71,15 @@ jobs:
         id: merge
         run: |
           git checkout main
+          PRE_MERGE=$(git rev-parse HEAD)
           if git merge upstream/main --no-edit; then
+            # GITHUB_TOKEN can never push .github/workflows/ changes - strip any
+            # workflow file changes upstream brought in, keep everything else.
+            if ! git diff --quiet "$PRE_MERGE" HEAD -- .github/workflows/; then
+              git checkout "$PRE_MERGE" -- .github/workflows/
+              git commit --amend --no-edit
+              echo "Stripped upstream workflow file changes (token restriction)"
+            fi
             echo "success=true" >> $GITHUB_OUTPUT
             echo "Merge clean"
           else
