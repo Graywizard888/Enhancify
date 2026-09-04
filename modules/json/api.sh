@@ -24,7 +24,9 @@ parseJsonFromAPI() {
                                     | map(if type == "object" then .version else . end)
                                     | map(select(. != null))
                                 )
-                            }) | from_entries
+                            })
+                            | map(select(.key != null and .key != ""))
+                            | from_entries
                         )
                     else . end)
                 ) |
@@ -69,11 +71,15 @@ parseJsonFromAPI() {
                         end
                     ) as $OPTIONS |
                     (
-                        $DESCRIPTION // "No description available"
+                        ($DESCRIPTION // "No description available")
+                        | gsub("[\\n\\r\\t]+"; " ")
+                        | gsub(" +"; " ")
+                        | gsub("^ +| +$"; "")
+                        | if . == "" then "No description available" else . end
                     ) as $DESCRIPTION |
                     [
                         $COMPATIBLE_PKGS |
-                        if . == null then
+                        if . == null or . == {} or length == 0 then
                             {"name": null, "versions": []}
                         else
                             to_entries[] |

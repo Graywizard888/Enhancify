@@ -11,7 +11,7 @@
     "source": "De-Vanced",
     "repository": "RookieEnough/De-Vanced",
     "api": {
-      "json": "https://raw.githubusercontent.com/RookieEnough/De-Vanced/refs/heads/dev/patches-list.json",
+      "json": "https://raw.githubusercontent.com/RookieEnough/De-Vanced/refs/heads/main/patches-list.json",
       "version": null
     }
   },
@@ -19,7 +19,7 @@
     "source": "Anddea",
     "repository": "anddea/revanced-patches",
     "api": {
-      "json": "https://raw.githubusercontent.com/anddea/revanced-patches/refs/heads/dev/patches-list.json",
+      "json": "https://raw.githubusercontent.com/anddea/revanced-patches/refs/heads/main/patches-list.json",
       "version": null
     }
   },
@@ -35,7 +35,7 @@
     "source": "hoo-dles",
     "repository": "hoo-dles/morphe-patches",
     "api": {
-      "json": "https://raw.githubusercontent.com/hoo-dles/morphe-patches/refs/heads/dev/patches-list.json",
+      "json": "https://raw.githubusercontent.com/hoo-dles/morphe-patches/refs/heads/main/patches-list.json",
       "version": null
     }
   },
@@ -43,7 +43,7 @@
     "source": "MorpheApp",
     "repository": "MorpheApp/morphe-patches",
     "api": {
-      "json": "https://raw.githubusercontent.com/MorpheApp/morphe-patches/refs/heads/dev/patches-list.json",
+      "json": "https://raw.githubusercontent.com/MorpheApp/morphe-patches/refs/heads/main/patches-list.json",
       "version": null
     }
   },
@@ -59,7 +59,7 @@
     "source": "PikoTwitter",
     "repository": "crimera/piko",
     "api": {
-      "json": "",
+      "json": "https://raw.githubusercontent.com/crimera/piko/refs/heads/main/patches-list.json",
       "version": null
     }
   },
@@ -75,7 +75,7 @@
     "source": "Adobo",
     "repository": "jkennethcarino/adobo",
     "api": {
-      "json": "https://raw.githubusercontent.com/jkennethcarino/adobo/refs/heads/dev/patches-list.json",
+      "json": "https://raw.githubusercontent.com/jkennethcarino/adobo/refs/heads/main/patches-list.json",
       "version": null
     }
   },
@@ -83,7 +83,7 @@
     "source": "Paresh-Patches",
     "repository": "Paresh-Maheshwari/paresh-patches",
     "api": {
-      "json": "https://raw.githubusercontent.com/Paresh-Maheshwari/paresh-patches/refs/heads/dev/patches-list.json",
+      "json": "https://raw.githubusercontent.com/Paresh-Maheshwari/paresh-patches/refs/heads/main/patches-list.json",
       "version": null
     }
   },
@@ -91,12 +91,12 @@
     "source": "brossh",
     "repository": "brosssh/morphe-patches",
     "api": {
-      "json": "https://raw.githubusercontent.com/brosssh/morphe-patches/refs/heads/dev/patches-list.json",
+      "json": "https://raw.githubusercontent.com/brosssh/morphe-patches/refs/heads/main/patches-list.json",
       "version": null
     }
   },
   {
-    "source": "rushiranpise",
+    "source": "Doom-Patches",
     "repository": "rushiranpise/morphe-patches",
     "api": {
       "json": "https://raw.githubusercontent.com/rushiranpise/morphe-patches/refs/heads/main/patches-list.json",

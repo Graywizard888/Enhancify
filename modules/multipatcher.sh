@@ -416,6 +416,8 @@ parseMultiSourcePatchesJson() {
     done
 
     AVAILABLE_PATCHES="$merged"
+    AVAILABLE_PATCHES_FILE="assets/Patches-merged.json"
+    printf '%s\n' "$merged" > "$AVAILABLE_PATCHES_FILE"
 
     [ -n "$ENABLED_PATCHES" ] || \
         ENABLED_PATCHES=$(jq -erc '.' "$STORAGE/$(_get_patches_storage_key)-patches.json" 2>/dev/null || echo '[]')
