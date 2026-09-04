@@ -2,11 +2,11 @@
 
 getRecommendedVersionsCount() {
     local count
-    count=$(jq -r --arg PKG_NAME "$PKG_NAME" \
-           --argjson AVAILABLE_PATCHES "$AVAILABLE_PATCHES" '
-        [$AVAILABLE_PATCHES[] | select(.pkgName == $PKG_NAME) | .versions // []] |
+    count=$(jq -nr --arg PKG_NAME "$PKG_NAME" \
+           --slurpfile ap "$(_available_patches_file)" '
+        [$ap[0][] | select(.pkgName == $PKG_NAME) | .versions // []] |
         if length > 0 then .[0] | length else 0 end
-    ' <<< "null")
+    ')
     
     echo "${count:-0}"
 }
@@ -83,11 +83,11 @@ showRecommendedVersions() {
     local -a RECOMMENDED_LIST
 
     readarray -t RECOMMENDED_LIST < <(
-        jq -r --arg PKG_NAME "$PKG_NAME" \
+        jq -nr --arg PKG_NAME "$PKG_NAME" \
               --arg INSTALLED_VERSION "$INSTALLED_VERSION" \
-              --argjson AVAILABLE_PATCHES "$AVAILABLE_PATCHES" '
+              --slurpfile ap "$(_available_patches_file)" '
 
-            [$AVAILABLE_PATCHES[] | select(.pkgName == $PKG_NAME) | .versions // []] |
+            [$ap[0][] | select(.pkgName == $PKG_NAME) | .versions // []] |
             if length > 0 then .[0] else [] end |
             
             if length == 0 then
@@ -102,7 +102,7 @@ showRecommendedVersions() {
                     $ver, "[AVAILABLE]"
                 end
             end
-        ' <<< "null"
+        '
     )
 
     if [[ ${#RECOMMENDED_LIST[@]} -eq 0 ]]; then

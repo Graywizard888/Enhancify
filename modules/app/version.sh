@@ -24,10 +24,10 @@ processVersionsJson() {
             --arg PKG_NAME "$PKG_NAME" \
             --arg INSTALLED_VERSION "$INSTALLED_VERSION" \
             --arg ALLOW_APP_VERSION_DOWNGRADE "$ALLOW_APP_VERSION_DOWNGRADE" \
-            --argjson AVAILABLE_PATCHES "$AVAILABLE_PATCHES" '
+            --slurpfile ap "$(_available_patches_file)" '
             . as $ALL_VERSIONS |
             (
-                $AVAILABLE_PATCHES[] |
+                $ap[0][] |
                 select(.pkgName == $PKG_NAME) |
                 .versions
             ) as $SUPPORTED_VERSIONS |
