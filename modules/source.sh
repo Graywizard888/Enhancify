@@ -484,7 +484,7 @@ changeSource() {
         rm -f "$CLI_DETECTION_FILE" &> /dev/null
         mkdir assets
 
-        unset AVAILABLE_PATCHES APPS_INFO APPS_LIST ENABLED_PATCHES
+        unset AVAILABLE_PATCHES APPS_INFO APPS_LIST ENABLED_PATCHES AVAILABLE_PATCHES_FILE
         return
     fi
 
