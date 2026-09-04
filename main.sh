@@ -83,13 +83,24 @@ ROOT_ACCESS="$1"
 RISH_ACCESS="$2"
 
 # Android 17 (dev preview) with the thedjchi Shizuku fork prints a
-# "Entering shell..." banner to stdout before every command. Strip it so it
-# never pollutes captured output (e.g. `$(rish -c "...")`) or causes real
-# success/error output to be misread as a failed command. The real rish exit
-# code is preserved so existing success/failure checks keep working.
+# "Entering shell..." banner (to stdout, and possibly stderr) before every
+# command. Strip it from both streams so it never pollutes captured output
+# (e.g. `$(rish -c "...")`) or causes real success/error output to be
+# misread as a failed command. The real rish exit code is preserved so
+# existing success/failure checks keep working.
 rish() {
-    command rish "$@" | grep -v '^[[:space:]]*Entering shell'
-    return "${PIPESTATUS[0]}"
+    local _rish_err _rish_rc
+    _rish_err=$(mktemp) 2>/dev/null
+    if [ -n "$_rish_err" ]; then
+        command rish "$@" 2>"$_rish_err" | grep -v '^[[:space:]]*Entering shell'
+        _rish_rc=${PIPESTATUS[0]}
+        grep -v '^[[:space:]]*Entering shell' "$_rish_err" >&2
+        rm -f "$_rish_err"
+    else
+        command rish "$@" | grep -v '^[[:space:]]*Entering shell'
+        _rish_rc=${PIPESTATUS[0]}
+    fi
+    return "$_rish_rc"
 }
 
 for MODULE in $(find modules -type f -name "*.sh"); do
