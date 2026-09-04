@@ -1,6 +1,5 @@
 #!/usr/bin/bash
 
-# Termux ARG_MAX is often ~128KiB. Never pass AVAILABLE_PATCHES via --argjson.
 _available_patches_file() {
     if [ -n "${AVAILABLE_PATCHES_FILE:-}" ] && [ -f "$AVAILABLE_PATCHES_FILE" ]; then
         printf '%s\n' "$AVAILABLE_PATCHES_FILE"
