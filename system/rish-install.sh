@@ -1,5 +1,15 @@
 #!/usr/bin/bash
 
+# Android 17 (dev preview) with the thedjchi Shizuku fork prints a
+# "Entering shell..." banner to stdout before every command. Strip it so it
+# never pollutes captured output (e.g. `$(rish -c "...")`) or causes real
+# success/error output to be misread as a failed command. The real rish exit
+# code is preserved so existing success/failure checks keep working.
+rish() {
+    command rish "$@" | grep -v '^[[:space:]]*Entering shell'
+    return "${PIPESTATUS[0]}"
+}
+
 PKG_NAME="$1"
 APP_NAME="$2"
 EXPORTED_APK_NAME="$3"

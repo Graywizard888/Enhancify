@@ -82,6 +82,15 @@ tput civis
 ROOT_ACCESS="$1"
 RISH_ACCESS="$2"
 
+# Android 17 (dev preview) with the thedjchi Shizuku fork prints a
+# "Entering shell..." banner to stdout before every command. Strip it so it
+# never pollutes captured output (e.g. `$(rish -c "...")`) or causes real
+# success/error output to be misread as a failed command. The real rish exit
+# code is preserved so existing success/failure checks keep working.
+rish() {
+    command rish "$@" | grep -v '^[[:space:]]*Entering shell'
+    return "${PIPESTATUS[0]}"
+}
 
 for MODULE in $(find modules -type f -name "*.sh"); do
     source "$MODULE"
