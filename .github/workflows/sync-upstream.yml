@@ -104,7 +104,7 @@ jobs:
         if: steps.check.outputs.needed == 'true' && steps.merge.outputs.success == 'true' && steps.tagcheck.outputs.exists == 'false'
         run: |
           git push origin main
-          git tag ${{ steps.upstream.outputs.tag }}
+          git tag -f ${{ steps.upstream.outputs.tag }}
           git push origin ${{ steps.upstream.outputs.tag }}
 
       - name: Create GitHub release
