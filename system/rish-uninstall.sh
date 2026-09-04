@@ -1,21 +1,24 @@
 #!/usr/bin/bash
 
-# Android 17 (dev preview) with the thedjchi Shizuku fork prints a
+# Android 17 (dev preview) with the thedjchi Shizuku fork prints an
 # "Entering shell..." banner (to stdout, and possibly stderr) before every
-# command. Strip it from both streams so it never pollutes captured output
-# (e.g. `$(rish -c "...")`) or causes real success/error output to be
-# misread as a failed command. The real rish exit code is preserved so
-# existing success/failure checks keep working.
+# command. It is emitted via println(), so it is always on its own line and
+# the real command output follows it. We delete that banner line, and also
+# strip the banner as a prefix if anything follows it on the same line, so
+# captured output (e.g. `$(rish -c "...")`) is never polluted and real
+# success/error output keeps priority. The real rish exit code is preserved.
 rish() {
-    local _rish_err _rish_rc
+    local _rish_err _rish_rc _rish_del _rish_strip
+    _rish_del='/^[[:space:]]*Entering shell\.\.*[[:space:]]*$/d'
+    _rish_strip='s/^[[:space:]]*Entering shell\.\.*[[:space:]]*//'
     _rish_err=$(mktemp) 2>/dev/null
     if [ -n "$_rish_err" ]; then
-        command rish "$@" 2>"$_rish_err" | grep -v '^[[:space:]]*Entering shell'
+        command rish "$@" 2>"$_rish_err" | sed -e "$_rish_del" -e "$_rish_strip"
         _rish_rc=${PIPESTATUS[0]}
-        grep -v '^[[:space:]]*Entering shell' "$_rish_err" >&2
+        sed -e "$_rish_del" -e "$_rish_strip" "$_rish_err" >&2
         rm -f "$_rish_err"
     else
-        command rish "$@" | grep -v '^[[:space:]]*Entering shell'
+        command rish "$@" | sed -e "$_rish_del" -e "$_rish_strip"
         _rish_rc=${PIPESTATUS[0]}
     fi
     return "$_rish_rc"
