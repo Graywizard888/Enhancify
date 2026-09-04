@@ -447,7 +447,7 @@ update_source_json_branch() {
 update_sources_json() {
     local sources_config=(
         "Anddea:main:dev"
-        "De-ReVanced:main:dev"
+        "De-Vanced:main:dev"
         "ReVancedExperiments:main:dev"
         "PikoTwitter:main:dev"
         "MorpheApp:main:dev"
@@ -456,7 +456,7 @@ update_sources_json() {
         "AmpleRevanced:main:dev"
         "Paresh-Patches:main:dev"
         "brossh:main:dev"
-        "rushiranpise:main:dev"
+        "Doom-Patches:main:dev"
     )
 
     for config in "${sources_config[@]}"; do

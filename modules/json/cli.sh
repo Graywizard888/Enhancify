@@ -126,9 +126,15 @@ parseJsonFromCLI() {
         local -a PKG_VERSIONS=()
 
         while IFS= read -r _line; do
+            _line="${_line%$'\r'}"
             case "$_line" in
-                P*:\ *)  PKG_NAME="${_line##*: }" ;;
-                $'\t'*)  PKG_VERSIONS+=("${_line#$'\t'}") ;;
+                "Package name: "*|"Package: "*|P*:\ *)
+                    PKG_NAME="${_line##*: }"
+                    PKG_NAME="${PKG_NAME#"${PKG_NAME%%[![:space:]]*}"}"
+                    ;;
+                $'\t'*)
+                    PKG_VERSIONS+=("${_line#$'\t'}")
+                    ;;
             esac
         done <<< "$PACKAGE"
 
@@ -138,9 +144,10 @@ parseJsonFromCLI() {
                     "pkgName": $PKG_NAME,
                     "versions": (
                         $ARGS.positional |
-                        if .[0] == "Any" then []
-                        else [ .[] | match(".*(?= \\()").string ]
-                        end | sort
+                        if length == 0 or .[0] == "Any" then []
+                        else
+                            map(select(. != "Any") | sub(" \\(.*$"; ""))
+                        end | unique | sort
                     ),
                     "patches": {"recommended": [], "optional": []},
                     "options": [],
@@ -168,6 +175,7 @@ parseJsonFromCLI() {
         local -a COMP_PKGS=()
 
         while IFS= read -r _line; do
+            _line="${_line%$'\r'}"
             case "$_line" in
                 "Name: "*)        PATCH_NAME="${_line#Name: }" ;;
                 "Enabled: "*)     USE="${_line#Enabled: }" ;;
@@ -181,15 +189,17 @@ parseJsonFromCLI() {
             continue
         fi
 
+        DESCRIPTION="${DESCRIPTION//$'\r'/}"
+        DESCRIPTION="${DESCRIPTION//$'\n'/ }"
         [[ -z "$DESCRIPTION" ]] && DESCRIPTION="No description available"
 
         PATCH=$(sed '/^Name:/d;/^Enabled:/d;/^Description:/d' <<< "$PATCH")
 
         if grep -q '^Compatible packages:' <<< "$PATCH"; then
             readarray -t COMP_PKGS < <(
-                grep $'^\tPackage name:' <<< "$PATCH" | sed 's/.*: //;s/ //g'
+                sed -n 's/^[[:space:]]*Package name:[[:space:]]*//p' <<< "$PATCH" | tr -d ' \r'
             )
-            PATCH=$(sed '/^Compatible packages:/d;/^\tPackage name:/d;/^\tVersions:/d;/^\tCompatible versions:/d;/^\t\t/d' <<< "$PATCH")
+            PATCH=$(sed '/^Compatible packages:/d;/^[ \t]*Package name:/d;/^[ \t]*Versions:/d;/^[ \t]*Compatible versions:/d;/^\t\t/d' <<< "$PATCH")
         fi
 
         local _opts_file="$_tmpdir/opts_${CTR}.json"
@@ -393,6 +403,15 @@ parseJsonFromCLI() {
             ) as $targets |
 
             reduce $targets[] as $pkg (.;
+                (if any(.[]; .pkgName == $pkg) then .
+                 else . + [{
+                     "pkgName": $pkg,
+                     "versions": [],
+                     "patches": {"recommended": [], "optional": []},
+                     "options": [],
+                     "descriptions": {}
+                 }]
+                 end) |
                 map(
                     if .pkgName == $pkg then
                         .patches |= (

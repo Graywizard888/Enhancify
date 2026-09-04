@@ -2,6 +2,12 @@
 
 managePatches() {
     local ENABLED_PATCHES_LIST BUTTON_TEXT PATCHES_ARRAY UPDATED_PATCHES CHOICES EXIT_CODE
+    local PATCHES_JSON_FILE
+
+    if ! PATCHES_JSON_FILE=$(_available_patches_file); then
+        PATCHES_JSON_FILE=$(mktemp)
+        printf '%s\n' "${AVAILABLE_PATCHES:-[]}" > "$PATCHES_JSON_FILE"
+    fi
     
     readarray -t ENABLED_PATCHES_LIST < <(
         jq -nrc --arg PKG_NAME "$PKG_NAME" --argjson ENABLED_PATCHES "$ENABLED_PATCHES" '
@@ -19,9 +25,9 @@ managePatches() {
         readarray -t PATCHES_ARRAY < <(
             jq -nrc \
                 --arg PKG_NAME "$PKG_NAME" \
-                --argjson AVAILABLE_PATCHES "$AVAILABLE_PATCHES" '
-                $AVAILABLE_PATCHES |
-                (map(select(.pkgName == $PKG_NAME or .pkgName == null) | .descriptions) | add) as $ALL_DESCRIPTIONS |
+                --slurpfile ap "$PATCHES_JSON_FILE" '
+                $ap[0] |
+                (map(select(.pkgName == $PKG_NAME or .pkgName == null) | .descriptions) | add // {}) as $ALL_DESCRIPTIONS |
                 .[] |
                 select(.pkgName == $PKG_NAME or .pkgName == null) |
                 .patches |
@@ -29,9 +35,20 @@ managePatches() {
                 . as $PATCH |
                 $PATCH,
                 (if ($ARGS.positional | index($PATCH)) != null then "on" else "off" end),
-                ($ALL_DESCRIPTIONS[$PATCH] // "No description available")
+                (
+                    ($ALL_DESCRIPTIONS[$PATCH] // "No description available")
+                    | gsub("[\\n\\r\\t]+"; " ")
+                    | gsub("%"; "%%")
+                    | if . == "" then "No description available" else . end
+                )
             ' --args "${ENABLED_PATCHES_LIST[@]}"
         )
+
+        if [ ${#PATCHES_ARRAY[@]} -eq 0 ] || [ $(( ${#PATCHES_ARRAY[@]} % 3 )) -ne 0 ]; then
+            notify msg "Unable to build the patches list for this app.\\nPatch metadata is invalid."
+            TASK="CHOOSE_APP"
+            return 1
+        fi
 
         CHOICES=$(
             "${DIALOG[@]}" \
@@ -60,10 +77,10 @@ managePatches() {
                 ;;
             1)
                 if [ "$BUTTON_TEXT" == "Recommended" ]; then
-                    readarray -t ENABLED_PATCHES_LIST < <(jq -nrc --arg PKG_NAME "$PKG_NAME" --argjson AVAILABLE_PATCHES "$AVAILABLE_PATCHES" '$AVAILABLE_PATCHES[] | select(.pkgName == $PKG_NAME or .pkgName == null) | .patches | .recommended[]')
+                    readarray -t ENABLED_PATCHES_LIST < <(jq -nrc --arg PKG_NAME "$PKG_NAME" --slurpfile ap "$PATCHES_JSON_FILE" '$ap[0][] | select(.pkgName == $PKG_NAME or .pkgName == null) | .patches | .recommended[]')
                     BUTTON_TEXT="Enable All"
                 elif [ "$BUTTON_TEXT" == "Enable All" ]; then
-                    readarray -t ENABLED_PATCHES_LIST < <(jq -nrc --arg PKG_NAME "$PKG_NAME" --argjson AVAILABLE_PATCHES "$AVAILABLE_PATCHES" '$AVAILABLE_PATCHES[] | select(.pkgName == $PKG_NAME or .pkgName == null) | .patches | .recommended[], .optional[]')
+                    readarray -t ENABLED_PATCHES_LIST < <(jq -nrc --arg PKG_NAME "$PKG_NAME" --slurpfile ap "$PATCHES_JSON_FILE" '$ap[0][] | select(.pkgName == $PKG_NAME or .pkgName == null) | .patches | .recommended[], .optional[]')
                     BUTTON_TEXT="Disable All"
                 elif [ "$BUTTON_TEXT" == "Disable All" ]; then
                     ENABLED_PATCHES_LIST=()
@@ -80,9 +97,9 @@ managePatches() {
     clear
 
     UPDATED_PATCHES=$(
-        jq -nc --arg PKG_NAME "$PKG_NAME" --argjson AVAILABLE_PATCHES "$AVAILABLE_PATCHES" --argjson ENABLED_PATCHES "$ENABLED_PATCHES" '
+        jq -nc --arg PKG_NAME "$PKG_NAME" --slurpfile ap "$PATCHES_JSON_FILE" --argjson ENABLED_PATCHES "$ENABLED_PATCHES" '
             [
-                $AVAILABLE_PATCHES[] |
+                $ap[0][] |
                 select(.pkgName == $PKG_NAME or .pkgName == null) |
                 .options[]
             ] as $AVAILABLE_OPTIONS |

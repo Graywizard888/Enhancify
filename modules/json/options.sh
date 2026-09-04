@@ -83,8 +83,8 @@ editOptions() {
                     --arg PKG_NAME "$PKG_NAME" \
                     --arg SELECTED_OPTION "$SELECTED_OPTION" \
                     --arg CURRENT_VALUE "${CURRENT_VALUE[0]}" \
-                    --argjson AVAILABLE_PATCHES "$AVAILABLE_PATCHES" '
-                    $AVAILABLE_PATCHES[] |
+                    --slurpfile ap "$(_available_patches_file)" '
+                    $ap[0][] |
                     select(.pkgName == $PKG_NAME or .pkgName == null) |
                     .options[] |
                     select(
