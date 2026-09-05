@@ -1,12 +1,5 @@
 #!/usr/bin/bash
 
-# Android 17 (dev preview) with the thedjchi Shizuku fork prints an
-# "Entering shell..." banner (to stdout, and possibly stderr) before every
-# command. It is emitted via println(), so it is always on its own line and
-# the real command output follows it. We delete that banner line, and also
-# strip the banner as a prefix if anything follows it on the same line, so
-# captured output (e.g. `$(rish -c "...")`) is never polluted and real
-# success/error output keeps priority. The real rish exit code is preserved.
 rish() {
     local _rish_err _rish_rc _rish_del _rish_strip
     _rish_del='/^[[:space:]]*Entering shell\.\.*[[:space:]]*$/d'
