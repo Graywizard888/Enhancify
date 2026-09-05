@@ -41,7 +41,7 @@ class PatcherEngine:
 
     def __init__(self, workspace_dir: Optional[Path] = None):
         self.workspace_dir = workspace_dir or Path(__file__).resolve().parent.parent
-        self.storage_dir = env.storage_dir
+        self.storage_dir = (self.workspace_dir / "storage") if workspace_dir else env.storage_dir
         self.log_file = self.storage_dir / "patch_log.txt"
 
     def _calculate_heap_and_gc(self) -> Tuple[int, str, List[str]]:

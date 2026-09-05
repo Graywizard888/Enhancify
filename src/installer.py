@@ -27,7 +27,7 @@ class AppInstaller:
         self.workspace_dir = workspace_dir or Path(__file__).resolve().parent.parent
         self.utils_dir = self.workspace_dir / "utils"
         self.system_dir = self.workspace_dir / "system"
-        self.storage_dir = env.storage_dir
+        self.storage_dir = (self.workspace_dir / "storage") if workspace_dir else env.storage_dir
         self.zipalign_bin = self.utils_dir / "zipalign"
         self.keystore_dir = self.workspace_dir / "keystore"
 

@@ -33,7 +33,7 @@ class PatchesManager:
 
     def __init__(self, workspace_dir: Optional[Path] = None):
         self.workspace_dir = workspace_dir or Path(__file__).resolve().parent.parent
-        self.storage_dir = env.storage_dir
+        self.storage_dir = (workspace_dir / "storage") if workspace_dir else env.storage_dir
 
     def _get_storage_key(self, source_name: str, multi_sources: Optional[List[str]] = None) -> str:
         if config.is_on("ENABLE_MULTIPATCHER") and multi_sources and len(multi_sources) > 1:

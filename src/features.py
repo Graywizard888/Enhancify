@@ -48,7 +48,7 @@ class GmsCoreManager:
 
     def __init__(self, workspace_dir: Optional[Path] = None):
         self.workspace_dir = workspace_dir or Path(__file__).resolve().parent.parent
-        self.storage_dir = env.storage_dir / "GmsCore"
+        self.storage_dir = (self.workspace_dir / "storage" / "GmsCore") if workspace_dir else (env.storage_dir / "GmsCore")
         self.storage_dir.mkdir(parents=True, exist_ok=True)
 
     def fetch_provider_release(self, provider: GmsCoreProvider) -> Optional[Dict[str, Any]]:
@@ -329,7 +329,7 @@ class StorageOperations:
         self.workspace_dir = workspace_dir or Path(__file__).resolve().parent.parent
         self.apps_dir = self.workspace_dir / "apps"
         self.assets_dir = self.workspace_dir / "assets"
-        self.storage_dir = env.storage_dir
+        self.storage_dir = (self.workspace_dir / "storage") if workspace_dir else env.storage_dir
         self.patched_dir = self.storage_dir / "Patched"
         self.stock_backup_dir = self.storage_dir / "Stock"
 
