@@ -2,8 +2,21 @@
 */**
 
 !main.sh
+!main.py
 !install.sh
 !sources.json
+!requirements.txt
 !modules/**
 !root/**
 !system/**
+!src/**
+!tests/**
+!utils/**
+!config/**
+!.Icons/**
+!.info
+!README.md
+!enhancify
+
+__pycache__/
+*.pyc

@@ -1,0 +1,4 @@
+textual
+rich
+requests
+beautifulsoup4
