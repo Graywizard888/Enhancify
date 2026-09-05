@@ -1,5 +1,29 @@
 #!/usr/bin/bash
 
+# Android 17 (dev preview) with the thedjchi Shizuku fork prints an
+# "Entering shell..." banner (to stdout, and possibly stderr) before every
+# command. It is emitted via println(), so it is always on its own line and
+# the real command output follows it. We delete that banner line, and also
+# strip the banner as a prefix if anything follows it on the same line, so
+# captured output (e.g. `$(rish -c "...")`) is never polluted and real
+# success/error output keeps priority. The real rish exit code is preserved.
+rish() {
+    local _rish_err _rish_rc _rish_del _rish_strip
+    _rish_del='/^[[:space:]]*Entering shell\.\.*[[:space:]]*$/d'
+    _rish_strip='s/^[[:space:]]*Entering shell\.\.*[[:space:]]*//'
+    _rish_err=$(mktemp) 2>/dev/null
+    if [ -n "$_rish_err" ]; then
+        command rish "$@" 2>"$_rish_err" | sed -e "$_rish_del" -e "$_rish_strip"
+        _rish_rc=${PIPESTATUS[0]}
+        sed -e "$_rish_del" -e "$_rish_strip" "$_rish_err" >&2
+        rm -f "$_rish_err"
+    else
+        command rish "$@" | sed -e "$_rish_del" -e "$_rish_strip"
+        _rish_rc=${PIPESTATUS[0]}
+    fi
+    return "$_rish_rc"
+}
+
 PKG_NAME="$1"
 APP_NAME="$2"
 EXPORTED_APK_NAME="$3"
