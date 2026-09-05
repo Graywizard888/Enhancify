@@ -5,6 +5,7 @@ Parallel GC, Pre-release Patches, Rish Flags, Keystore, CLI Cache) and links to 
 """
 
 from rich.text import Text
+from textual import work
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal, ScrollableContainer, Vertical
 from textual.screen import Screen
@@ -13,7 +14,7 @@ from textual.widgets import Button, Checkbox, Footer, Label, ListItem, ListView,
 from src.config import config
 from src.environment import env
 from src.theme import get_current_theme
-from src.tui.widgets.dialogs import InputDialog, MessageDialog
+from src.tui.widgets.dialogs import InputDialog, MessageDialog, ProgressModal
 from src.tui.widgets.header import CyberHeader
 
 
@@ -76,6 +77,7 @@ class SettingsScreen(Screen):
                 with Horizontal():
                     yield Button("🌐 APKMirror Scraper Config", id="btn-apkmirror-cfg")
                     yield Button("📦 Backup Stock Apps", id="btn-backup-apps")
+                    yield Button("🔄 Auto Upgrade", id="btn-auto-upgrade")
                     yield Button("🔙 Back to Main Menu [B]", id="btn-back", classes="btn-secondary")
 
             # General Toggles
@@ -170,8 +172,23 @@ class SettingsScreen(Screen):
             from src.features import storage_ops
             count, msg = storage_ops.backup_stock_apps()
             self.app.push_screen(MessageDialog("Backup Result", msg))
+        elif btn_id == "btn-auto-upgrade":
+            from src.features import storage_ops
+            modal = ProgressModal("Auto Upgrade", "Checking for package updates via pkg...")
+            self.app.push_screen(modal)
+            self.run_auto_upgrade_worker(modal)
         elif btn_id == "btn-back":
             self.action_back()
+
+    @work(thread=True)
+    def run_auto_upgrade_worker(self, modal: ProgressModal) -> None:
+        from src.features import storage_ops
+        ok, msg = storage_ops.auto_upgrade_dependencies()
+        self.app.call_from_thread(modal.dismiss, None)
+        self.app.call_from_thread(
+            self.app.push_screen,
+            MessageDialog("Auto Upgrade Result", msg)
+        )
 
     def action_theme_select(self) -> None:
         self.app.push_screen("theme_select_screen")

@@ -375,6 +375,26 @@ class StorageOperations:
 
         return copied, f"Successfully backed up {copied} apps to:\n{self.stock_backup_dir}"
 
+    def auto_upgrade_dependencies(self) -> Tuple[bool, str]:
+        """Check and upgrade Termux dependency packages."""
+        if not shutil.which("pkg"):
+            return False, "Not running in Termux (pkg package manager not available)."
+
+        target_pkgs = ["wget", "ncurses-utils", "dialog", "pup", "jq", "aria2", "unzip", "zip", "python"]
+        code, _, _ = run_command(["pkg", "update", "-y"], timeout=60)
+        code2, out, _ = run_command(["apt", "list", "--upgradable"], timeout=30)
+
+        upgradable = [p.split("/")[0] for p in out.splitlines() if "/" in p]
+        to_upgrade = [p for p in target_pkgs if p in upgradable]
+
+        if not to_upgrade:
+            return True, "All Enhancify dependency packages are already up to date!"
+
+        code3, _, _ = run_command(["pkg", "install", "-y"] + to_upgrade, timeout=120)
+        if code3 == 0:
+            return True, f"Successfully upgraded packages: {', '.join(to_upgrade)}"
+        return False, "Failed to upgrade packages. Check internet connection."
+
 
 # Global feature manager instances
 gmscore_mgr = GmsCoreManager()

@@ -196,6 +196,14 @@ class AppInstaller:
 
     # --- Mode-Specific Installation ---
 
+    def run_dex_optimization(self, pkg_name: str, install_type: str = "new") -> bool:
+        """Run dex optimization via Rish."""
+        profile_mode = "speed" if install_type == "update" else "quicken"
+        force_flag = "-f" if install_type == "update" else ""
+        cmd = ["rish", "-c", f"cmd package compile -m {profile_mode} {force_flag} {pkg_name}"]
+        code, out, _ = run_command(cmd, timeout=30)
+        return code == 0
+
     def install_or_export(
         self,
         apk_path: Path,
@@ -248,10 +256,15 @@ class AppInstaller:
                 cmd = ["bash", str(rish_script), pkg_name, app_name, exported_name, str(self.storage_dir), "new"]
                 code, out, err = run_command(cmd, timeout=60)
                 if code == 0:
+                    # Run DEX Optimization
+                    if progress_callback:
+                        progress_callback("Running DEX Optimization via Rish...")
+                    self.run_dex_optimization(pkg_name, "new")
+
                     if config.is_on("LAUNCH_APP_AFTER_MOUNT"):
                         launch_cmd = f"pm resolve-activity --brief {pkg_name} | tail -n 1 | xargs am start -n"
                         subprocess.run(["rish", "-c", launch_cmd], capture_output=True)
-                    return True, f"{app_name} installed successfully via Rish!"
+                    return True, f"{app_name} installed successfully via Rish with Dex Optimization!"
                 return False, f"Rish installation failed: {err or out}"
             return False, "rish-install.sh script not found!"
 
