@@ -1,0 +1,272 @@
+/*
+ * Enhancify Cybernetic Green Textual Stylesheet (TCSS)
+ * Optimized for Termux / Mobile Android displays with high contrast,
+ * clean typography, responsive wrapping, and touch-friendly targets.
+ */
+
+Screen {
+    background: #0d1117;
+    color: #e6edf3;
+}
+
+/* Header & Status Banner */
+#cyber-header {
+    dock: top;
+    height: auto;
+    background: #161b22;
+    border-bottom: solid #00ff7f;
+    padding: 0 1;
+}
+
+#header-title-box {
+    width: 100%;
+    align-horizontal: center;
+    padding: 0;
+}
+
+#header-title {
+    text-style: bold;
+    color: #00ff7f;
+}
+
+#header-subtitle {
+    color: #8b949e;
+    text-align: center;
+}
+
+#status-bar-badges {
+    layout: horizontal;
+    align-horizontal: center;
+    height: auto;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.badge {
+    padding: 0 1;
+    margin: 0 1;
+    text-style: bold;
+    border: round #30363d;
+    background: #21262d;
+    color: #c9d1d9;
+}
+
+.badge-green {
+    border: round #00ff7f;
+    color: #00ff7f;
+    background: #0d2818;
+}
+
+.badge-cyan {
+    border: round #00e5ff;
+    color: #00e5ff;
+    background: #072a38;
+}
+
+.badge-purple {
+    border: round #d2a8ff;
+    color: #d2a8ff;
+    background: #261738;
+}
+
+.badge-yellow {
+    border: round #ffd700;
+    color: #ffd700;
+    background: #2e2608;
+}
+
+/* Container & Cards */
+.container-box {
+    padding: 1;
+    height: 1fr;
+    overflow-y: auto;
+}
+
+.card {
+    background: #161b22;
+    border: round #30363d;
+    padding: 1;
+    margin-bottom: 1;
+}
+
+.card:focus {
+    border: round #00ff7f;
+}
+
+.card-title {
+    text-style: bold;
+    color: #00ff7f;
+    margin-bottom: 0;
+}
+
+.card-desc {
+    color: #8b949e;
+    margin-bottom: 1;
+}
+
+/* Buttons */
+Button {
+    background: #21262d;
+    color: #e6edf3;
+    border: round #30363d;
+    height: 3;
+    min-width: 16;
+    margin: 0 1 1 0;
+    text-style: bold;
+}
+
+Button:hover {
+    background: #30363d;
+    border: round #00ff7f;
+    color: #ffffff;
+}
+
+Button:focus {
+    background: #238636;
+    border: round #00ff7f;
+    color: #ffffff;
+}
+
+Button.btn-primary {
+    background: #0d4429;
+    border: round #00ff7f;
+    color: #00ff7f;
+}
+
+Button.btn-primary:focus {
+    background: #00ff7f;
+    color: #000000;
+}
+
+Button.btn-danger {
+    background: #490202;
+    border: round #ff4444;
+    color: #ff6666;
+}
+
+Button.btn-danger:focus {
+    background: #ff4444;
+    color: #ffffff;
+}
+
+Button.btn-secondary {
+    background: #1f242c;
+    border: round #8b949e;
+    color: #c9d1d9;
+}
+
+/* Menu Item Tile */
+.menu-tile {
+    background: #161b22;
+    border: round #30363d;
+    padding: 1;
+    margin-bottom: 1;
+    height: auto;
+}
+
+.menu-tile:hover {
+    border: round #00e5ff;
+    background: #1a2330;
+}
+
+.menu-tile:focus {
+    border: round #00ff7f;
+    background: #152922;
+}
+
+/* Lists & Tables */
+ListView {
+    background: #0d1117;
+    border: round #30363d;
+    height: 1fr;
+    padding: 0;
+}
+
+ListItem {
+    padding: 1;
+    background: #161b22;
+    border-bottom: solid #21262d;
+}
+
+ListItem:hover {
+    background: #21262d;
+}
+
+ListItem:focus {
+    background: #0d3826;
+    color: #00ff7f;
+}
+
+/* Modals & Dialogs */
+ModalScreen {
+    align: center middle;
+    background: rgba(0, 0, 0, 0.75);
+}
+
+.dialog-box {
+    width: 85%;
+    max-width: 70;
+    height: auto;
+    max-height: 85%;
+    background: #161b22;
+    border: round #00ff7f;
+    padding: 1 2;
+    overflow-y: auto;
+}
+
+.dialog-title {
+    text-style: bold;
+    color: #00ff7f;
+    border-bottom: solid #30363d;
+    padding-bottom: 1;
+    margin-bottom: 1;
+    text-align: center;
+}
+
+.dialog-message {
+    color: #c9d1d9;
+    margin-bottom: 1;
+}
+
+.dialog-buttons {
+    layout: horizontal;
+    align-horizontal: center;
+    margin-top: 1;
+    height: auto;
+}
+
+/* Inputs & Search */
+Input {
+    background: #0d1117;
+    border: round #30363d;
+    color: #00ff7f;
+    margin-bottom: 1;
+}
+
+Input:focus {
+    border: round #00ff7f;
+}
+
+/* Log & Code Views */
+#log-viewer {
+    background: #05080c;
+    border: round #00ff7f;
+    color: #a8ffb2;
+    height: 1fr;
+    padding: 1;
+    overflow-y: auto;
+}
+
+/* Progress bar */
+ProgressBar {
+    margin: 1 0;
+}
+
+Bar > .bar--bar {
+    color: #00ff7f;
+    background: #0d3826;
+}
+
+Bar > .bar--complete {
+    color: #00ff7f;
+}
