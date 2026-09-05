@@ -14,6 +14,8 @@ from typing import Any, Dict, Optional
 
 DEFAULT_CONFIG: Dict[str, str] = {
     "SOURCE": "Anddea",
+    "THEME_ID": "cyber_green",
+    "THEME": "Cybernetic Green",
     "DARK_THEME": "off",
     "GREEN_THEME": "on",
     "OPTIMIZE_LIBS": "on",

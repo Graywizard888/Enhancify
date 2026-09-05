@@ -70,6 +70,7 @@ async def run_smoke_tests() -> bool:
                 screen_names = [
                     "source_select_screen",
                     "settings_screen",
+                    "theme_select_screen",
                     "custom_sources_screen",
                     "keystore_mgr_screen",
                     "token_mgr_screen",

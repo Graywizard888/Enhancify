@@ -10,6 +10,7 @@ from textual.app import App, ComposeResult
 
 from src.config import config
 from src.environment import env
+from src.theme import THEME_MAP, THEMES, get_current_theme
 from src.tui.screens.app_select import AppSelectScreen
 from src.tui.screens.bundle_patcher import BundlePatcherScreen
 from src.tui.screens.custom_sources import CustomSourcesScreen
@@ -23,6 +24,7 @@ from src.tui.screens.settings import SettingsScreen
 from src.tui.screens.source_select import SourceSelectScreen
 from src.tui.screens.specs import SpecsScreen
 from src.tui.screens.storage_mgr import StorageManagerScreen
+from src.tui.screens.theme_select import ThemeSelectScreen
 from src.tui.screens.token_mgr import TokenManagerScreen
 from src.tui.screens.unmount import UnmountScreen
 from src.tui.screens.version_select import VersionSelectScreen
@@ -47,6 +49,7 @@ class EnhancifyApp(App):
         "options_edit_screen": OptionsEditScreen,
         "patch_progress_screen": PatchProgressScreen,
         "settings_screen": SettingsScreen,
+        "theme_select_screen": ThemeSelectScreen,
         "custom_sources_screen": CustomSourcesScreen,
         "keystore_mgr_screen": KeystoreManagerScreen,
         "token_mgr_screen": TokenManagerScreen,
@@ -64,5 +67,19 @@ class EnhancifyApp(App):
         self.selected_app: Dict[str, Any] = {}
 
     def on_mount(self) -> None:
-        """Start on main menu."""
+        """Apply active theme and start on main menu."""
+        cur_theme = get_current_theme()
+        self.apply_theme(cur_theme.id)
         self.push_screen("main_menu_screen")
+
+    def apply_theme(self, theme_id: str) -> None:
+        """Dynamically add theme CSS class to App."""
+        # Remove all existing theme classes
+        for th in THEMES:
+            self.remove_class(th.css_class)
+
+        if theme_id in THEME_MAP:
+            target_class = THEME_MAP[theme_id].css_class
+            self.add_class(target_class)
+        else:
+            self.add_class("theme-cyber-green")

@@ -14,6 +14,7 @@ from src.environment import Environment
 from src.features import BundlePatcherManager, KeystoreManager, StorageOperations
 from src.patches import PatchesManager
 from src.sources import SourcesManager
+from src.theme import THEMES, get_current_theme, set_current_theme
 
 
 class TestEnhancifyCore(unittest.TestCase):
@@ -114,6 +115,22 @@ class TestEnhancifyCore(unittest.TestCase):
         (self.workspace / "apps" / "YouTube").mkdir(parents=True)
         (self.workspace / "apps" / "YouTube" / "stock.apk").write_text("dummy apk")
         self.assertEqual(so.delete_workspace_apps(), 1)
+
+    def test_theme_manager(self):
+        self.assertGreaterEqual(len(THEMES), 8)
+        cur = get_current_theme()
+        self.assertIsNotNone(cur)
+
+        # Switch theme to cyberpunk_neon
+        ok = set_current_theme("cyberpunk_neon")
+        self.assertTrue(ok)
+        new_theme = get_current_theme()
+        self.assertEqual(new_theme.id, "cyberpunk_neon")
+        self.assertEqual(new_theme.name, "Cyberpunk Neon")
+
+        # Reset back to cyber_green
+        set_current_theme("cyber_green")
+        self.assertEqual(get_current_theme().id, "cyber_green")
 
 
 if __name__ == "__main__":

@@ -20,6 +20,7 @@ class MainMenuScreen(Screen):
     BINDINGS = [
         ("p", "action_patch_app", "Patch App"),
         ("s", "action_change_source", "Change Source"),
+        ("t", "action_themes", "Themes"),
         ("b", "action_bundle_patcher", "Bundle Patcher"),
         ("c", "action_settings", "Settings"),
         ("g", "action_gmscore", "GmsCore"),
@@ -42,6 +43,7 @@ class MainMenuScreen(Screen):
                 with Vertical():
                     yield Button("🚀 Patch App  [P]", id="btn-patch", classes="btn-primary")
                     yield Button("📝 Change Source  [S]", id="btn-source")
+                    yield Button("🎨 UI Themes  [T]", id="btn-themes")
                     yield Button("📦 Bundle Patcher (Experimental)  [B]", id="btn-bundle")
                     yield Button("⚙️  Configure & Settings  [C]", id="btn-settings")
                     yield Button("🔌 Fetch GmsCore (MicroG)  [G]", id="btn-gmscore")
@@ -61,6 +63,8 @@ class MainMenuScreen(Screen):
             self.action_patch_app()
         elif btn_id == "btn-source":
             self.action_change_source()
+        elif btn_id == "btn-themes":
+            self.action_themes()
         elif btn_id == "btn-bundle":
             self.action_bundle_patcher()
         elif btn_id == "btn-settings":
@@ -81,6 +85,9 @@ class MainMenuScreen(Screen):
 
     def action_change_source(self) -> None:
         self.app.push_screen("source_select_screen")
+
+    def action_themes(self) -> None:
+        self.app.push_screen("theme_select_screen")
 
     def action_bundle_patcher(self) -> None:
         self.app.push_screen("bundle_patcher_screen")

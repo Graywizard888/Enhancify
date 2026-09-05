@@ -1,6 +1,6 @@
 """
 Enhancify Settings & Configuration Screen
-Provides toggle switches for runtime options (Cybernetic Green Theme, Lib Optimization,
+Provides toggle switches for runtime options (Theme Selection, Lib Optimization,
 Parallel GC, Pre-release Patches, Rish Flags, Keystore, CLI Cache) and links to sub-managers.
 """
 
@@ -12,12 +12,12 @@ from textual.widgets import Button, Checkbox, Footer, Label, ListItem, ListView,
 
 from src.config import config
 from src.environment import env
+from src.theme import get_current_theme
 from src.tui.widgets.dialogs import InputDialog, MessageDialog
 from src.tui.widgets.header import CyberHeader
 
 
 TOGGLE_KEYS = [
-    ("GREEN_THEME", "Cybernetic Green Theme", "Use Graywizard's Cybernetic Green theme"),
     ("OPTIMIZE_LIBS", "Optimize Libs (RipLibs)", "Strip unused native CPU architecture binaries from APK"),
     ("LAUNCH_APP_AFTER_MOUNT", "Auto Launch After Mount", "Automatically launch patched application after install/mount"),
     ("ALLOW_APP_VERSION_DOWNGRADE", "Allow Version Downgrades", "Permit installing APK with lower version code"),
@@ -41,6 +41,7 @@ class SettingsScreen(Screen):
     """Settings & configuration screen."""
 
     BINDINGS = [
+        ("t", "action_theme_select", "Change Theme"),
         ("b", "action_back", "Back"),
         ("escape", "action_back", "Back"),
     ]
@@ -49,9 +50,19 @@ class SettingsScreen(Screen):
         has_root, has_rish, mode_label = env.check_privileges()
         _, _, net_status = env.check_network()
 
+        cur_theme = get_current_theme()
+
         yield CyberHeader(mode_label=mode_label, online_status=net_status)
 
         with ScrollableContainer(classes="container-box"):
+            # Theme Card
+            with Vertical(classes="card"):
+                yield Label("🎨 Appearance & Themes", classes="card-title")
+                yield Label(f"Active Theme: [bold {cur_theme.primary_color}]{cur_theme.name}[/] — {cur_theme.description}", classes="card-desc")
+
+                with Horizontal():
+                    yield Button("🎨 Switch Theme [T]", id="btn-theme-select", classes="btn-primary")
+
             # Sub-manager shortcuts
             with Vertical(classes="card"):
                 yield Label("🔧 Configuration Modules", classes="card-title")
@@ -145,7 +156,9 @@ class SettingsScreen(Screen):
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         btn_id = event.button.id
-        if btn_id == "btn-custom-src":
+        if btn_id == "btn-theme-select":
+            self.action_theme_select()
+        elif btn_id == "btn-custom-src":
             self.app.push_screen("custom_sources_screen")
         elif btn_id == "btn-keystore":
             self.app.push_screen("keystore_mgr_screen")
@@ -159,6 +172,9 @@ class SettingsScreen(Screen):
             self.app.push_screen(MessageDialog("Backup Result", msg))
         elif btn_id == "btn-back":
             self.action_back()
+
+    def action_theme_select(self) -> None:
+        self.app.push_screen("theme_select_screen")
 
     def configure_apkmirror(self) -> None:
         cur_limit = config.get_apkmirror_page_limit()

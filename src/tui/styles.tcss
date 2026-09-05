@@ -1,15 +1,25 @@
 /*
- * Enhancify Cybernetic Green Textual Stylesheet (TCSS)
- * Optimized for Termux / Mobile Android displays with high contrast,
- * clean typography, responsive wrapping, and touch-friendly targets.
+ * Enhancify Textual Stylesheet (TCSS)
+ * Supports Multi-Theme Architecture:
+ * 1. Cybernetic Green
+ * 2. Cyberpunk Neon
+ * 3. Dracula Vampire
+ * 4. Catppuccin Mocha
+ * 5. Nordic Frost
+ * 6. Sunset Amber
+ * 7. Matrix Phosphor
+ * 8. OLED Midnight Dark
  */
+
+/* ====================================================
+   BASE COMMON LAYOUT & WIDGETS
+   ==================================================== */
 
 Screen {
     background: #0d1117;
     color: #e6edf3;
 }
 
-/* Header & Status Banner */
 #cyber-header {
     dock: top;
     height: auto;
@@ -18,20 +28,9 @@ Screen {
     padding: 0 1;
 }
 
-#header-title-box {
-    width: 100%;
-    align-horizontal: center;
-    padding: 0;
-}
-
 #header-title {
     text-style: bold;
     color: #00ff7f;
-}
-
-#header-subtitle {
-    color: #8b949e;
-    text-align: center;
 }
 
 #status-bar-badges {
@@ -75,7 +74,30 @@ Screen {
     background: #2e2608;
 }
 
-/* Container & Cards */
+.badge-pink {
+    border: round #ff007f;
+    color: #ff007f;
+    background: #38081f;
+}
+
+.badge-mauve {
+    border: round #cba6f7;
+    color: #cba6f7;
+    background: #2b1d3d;
+}
+
+.badge-nord {
+    border: round #88c0d0;
+    color: #88c0d0;
+    background: #1e2c38;
+}
+
+.badge-matrix {
+    border: round #00ff00;
+    color: #00ff00;
+    background: #002200;
+}
+
 .container-box {
     padding: 1;
     height: 1fr;
@@ -104,7 +126,6 @@ Screen {
     margin-bottom: 1;
 }
 
-/* Buttons */
 Button {
     background: #21262d;
     color: #e6edf3;
@@ -155,26 +176,6 @@ Button.btn-secondary {
     color: #c9d1d9;
 }
 
-/* Menu Item Tile */
-.menu-tile {
-    background: #161b22;
-    border: round #30363d;
-    padding: 1;
-    margin-bottom: 1;
-    height: auto;
-}
-
-.menu-tile:hover {
-    border: round #00e5ff;
-    background: #1a2330;
-}
-
-.menu-tile:focus {
-    border: round #00ff7f;
-    background: #152922;
-}
-
-/* Lists & Tables */
 ListView {
     background: #0d1117;
     border: round #30363d;
@@ -197,7 +198,6 @@ ListItem:focus {
     color: #00ff7f;
 }
 
-/* Modals & Dialogs */
 ModalScreen {
     align: center middle;
     background: rgba(0, 0, 0, 0.75);
@@ -235,7 +235,6 @@ ModalScreen {
     height: auto;
 }
 
-/* Inputs & Search */
 Input {
     background: #0d1117;
     border: round #30363d;
@@ -247,7 +246,6 @@ Input:focus {
     border: round #00ff7f;
 }
 
-/* Log & Code Views */
 #log-viewer {
     background: #05080c;
     border: round #00ff7f;
@@ -257,7 +255,6 @@ Input:focus {
     overflow-y: auto;
 }
 
-/* Progress bar */
 ProgressBar {
     margin: 1 0;
 }
@@ -269,4 +266,637 @@ Bar > .bar--bar {
 
 Bar > .bar--complete {
     color: #00ff7f;
+}
+
+
+/* ====================================================
+   THEME 2: CYBERPUNK NEON
+   ==================================================== */
+
+App.theme-cyberpunk-neon Screen {
+    background: #0c0817;
+    color: #f0f6fc;
+}
+
+App.theme-cyberpunk-neon #cyber-header {
+    background: #171126;
+    border-bottom: solid #ff007f;
+}
+
+App.theme-cyberpunk-neon #header-title {
+    color: #ff007f;
+}
+
+App.theme-cyberpunk-neon .card {
+    background: #171126;
+    border: round #38225c;
+}
+
+App.theme-cyberpunk-neon .card:focus {
+    border: round #ff007f;
+}
+
+App.theme-cyberpunk-neon .card-title {
+    color: #ff007f;
+}
+
+App.theme-cyberpunk-neon Button.btn-primary {
+    background: #4a0028;
+    border: round #ff007f;
+    color: #ff007f;
+}
+
+App.theme-cyberpunk-neon Button.btn-primary:focus {
+    background: #ff007f;
+    color: #ffffff;
+}
+
+App.theme-cyberpunk-neon Button:focus {
+    background: #a30052;
+    border: round #00f0ff;
+    color: #ffffff;
+}
+
+App.theme-cyberpunk-neon ListItem:focus {
+    background: #380826;
+    color: #00f0ff;
+}
+
+App.theme-cyberpunk-neon .dialog-box {
+    background: #171126;
+    border: round #ff007f;
+}
+
+App.theme-cyberpunk-neon .dialog-title {
+    color: #ff007f;
+    border-bottom: solid #38225c;
+}
+
+App.theme-cyberpunk-neon Input {
+    color: #00f0ff;
+    border: round #38225c;
+}
+
+App.theme-cyberpunk-neon Input:focus {
+    border: round #ff007f;
+}
+
+App.theme-cyberpunk-neon #log-viewer {
+    background: #07040d;
+    border: round #ff007f;
+    color: #ff80c0;
+}
+
+App.theme-cyberpunk-neon Bar > .bar--bar {
+    color: #ff007f;
+    background: #380826;
+}
+
+App.theme-cyberpunk-neon Bar > .bar--complete {
+    color: #00f0ff;
+}
+
+
+/* ====================================================
+   THEME 3: DRACULA VAMPIRE
+   ==================================================== */
+
+App.theme-dracula Screen {
+    background: #1e1f29;
+    color: #f8f8f2;
+}
+
+App.theme-dracula #cyber-header {
+    background: #282a36;
+    border-bottom: solid #bd93f9;
+}
+
+App.theme-dracula #header-title {
+    color: #bd93f9;
+}
+
+App.theme-dracula .card {
+    background: #282a36;
+    border: round #44475a;
+}
+
+App.theme-dracula .card:focus {
+    border: round #bd93f9;
+}
+
+App.theme-dracula .card-title {
+    color: #bd93f9;
+}
+
+App.theme-dracula Button.btn-primary {
+    background: #382a54;
+    border: round #bd93f9;
+    color: #bd93f9;
+}
+
+App.theme-dracula Button.btn-primary:focus {
+    background: #bd93f9;
+    color: #282a36;
+}
+
+App.theme-dracula Button:focus {
+    background: #6272a4;
+    border: round #ff79c6;
+    color: #ffffff;
+}
+
+App.theme-dracula ListItem:focus {
+    background: #44475a;
+    color: #50fa7b;
+}
+
+App.theme-dracula .dialog-box {
+    background: #282a36;
+    border: round #bd93f9;
+}
+
+App.theme-dracula .dialog-title {
+    color: #bd93f9;
+    border-bottom: solid #44475a;
+}
+
+App.theme-dracula Input {
+    color: #50fa7b;
+    border: round #44475a;
+}
+
+App.theme-dracula Input:focus {
+    border: round #bd93f9;
+}
+
+App.theme-dracula #log-viewer {
+    background: #15161e;
+    border: round #bd93f9;
+    color: #50fa7b;
+}
+
+App.theme-dracula Bar > .bar--bar {
+    color: #bd93f9;
+    background: #44475a;
+}
+
+App.theme-dracula Bar > .bar--complete {
+    color: #50fa7b;
+}
+
+
+/* ====================================================
+   THEME 4: CATPPUCCIN MOCHA
+   ==================================================== */
+
+App.theme-catppuccin Screen {
+    background: #181825;
+    color: #cdd6f4;
+}
+
+App.theme-catppuccin #cyber-header {
+    background: #1e1e2e;
+    border-bottom: solid #cba6f7;
+}
+
+App.theme-catppuccin #header-title {
+    color: #cba6f7;
+}
+
+App.theme-catppuccin .card {
+    background: #1e1e2e;
+    border: round #313244;
+}
+
+App.theme-catppuccin .card:focus {
+    border: round #cba6f7;
+}
+
+App.theme-catppuccin .card-title {
+    color: #cba6f7;
+}
+
+App.theme-catppuccin Button.btn-primary {
+    background: #3b2d54;
+    border: round #cba6f7;
+    color: #cba6f7;
+}
+
+App.theme-catppuccin Button.btn-primary:focus {
+    background: #cba6f7;
+    color: #1e1e2e;
+}
+
+App.theme-catppuccin Button:focus {
+    background: #45475a;
+    border: round #89dceb;
+    color: #ffffff;
+}
+
+App.theme-catppuccin ListItem:focus {
+    background: #313244;
+    color: #a6e3a1;
+}
+
+App.theme-catppuccin .dialog-box {
+    background: #1e1e2e;
+    border: round #cba6f7;
+}
+
+App.theme-catppuccin .dialog-title {
+    color: #cba6f7;
+    border-bottom: solid #313244;
+}
+
+App.theme-catppuccin Input {
+    color: #89dceb;
+    border: round #313244;
+}
+
+App.theme-catppuccin Input:focus {
+    border: round #cba6f7;
+}
+
+App.theme-catppuccin #log-viewer {
+    background: #11111b;
+    border: round #cba6f7;
+    color: #a6e3a1;
+}
+
+App.theme-catppuccin Bar > .bar--bar {
+    color: #cba6f7;
+    background: #313244;
+}
+
+App.theme-catppuccin Bar > .bar--complete {
+    color: #89dceb;
+}
+
+
+/* ====================================================
+   THEME 5: NORDIC FROST
+   ==================================================== */
+
+App.theme-nordic-frost Screen {
+    background: #242933;
+    color: #eceff4;
+}
+
+App.theme-nordic-frost #cyber-header {
+    background: #2e3440;
+    border-bottom: solid #88c0d0;
+}
+
+App.theme-nordic-frost #header-title {
+    color: #88c0d0;
+}
+
+App.theme-nordic-frost .card {
+    background: #2e3440;
+    border: round #434c5e;
+}
+
+App.theme-nordic-frost .card:focus {
+    border: round #88c0d0;
+}
+
+App.theme-nordic-frost .card-title {
+    color: #88c0d0;
+}
+
+App.theme-nordic-frost Button.btn-primary {
+    background: #2b4554;
+    border: round #88c0d0;
+    color: #88c0d0;
+}
+
+App.theme-nordic-frost Button.btn-primary:focus {
+    background: #88c0d0;
+    color: #2e3440;
+}
+
+App.theme-nordic-frost Button:focus {
+    background: #4c566a;
+    border: round #81a1c1;
+    color: #ffffff;
+}
+
+App.theme-nordic-frost ListItem:focus {
+    background: #3b4252;
+    color: #88c0d0;
+}
+
+App.theme-nordic-frost .dialog-box {
+    background: #2e3440;
+    border: round #88c0d0;
+}
+
+App.theme-nordic-frost .dialog-title {
+    color: #88c0d0;
+    border-bottom: solid #434c5e;
+}
+
+App.theme-nordic-frost Input {
+    color: #88c0d0;
+    border: round #434c5e;
+}
+
+App.theme-nordic-frost Input:focus {
+    border: round #88c0d0;
+}
+
+App.theme-nordic-frost #log-viewer {
+    background: #1b1f27;
+    border: round #88c0d0;
+    color: #88c0d0;
+}
+
+App.theme-nordic-frost Bar > .bar--bar {
+    color: #88c0d0;
+    background: #3b4252;
+}
+
+App.theme-nordic-frost Bar > .bar--complete {
+    color: #81a1c1;
+}
+
+
+/* ====================================================
+   THEME 6: SUNSET AMBER
+   ==================================================== */
+
+App.theme-sunset-amber Screen {
+    background: #14110e;
+    color: #fdf0d5;
+}
+
+App.theme-sunset-amber #cyber-header {
+    background: #1f1a15;
+    border-bottom: solid #ffb703;
+}
+
+App.theme-sunset-amber #header-title {
+    color: #ffb703;
+}
+
+App.theme-sunset-amber .card {
+    background: #1f1a15;
+    border: round #3d3328;
+}
+
+App.theme-sunset-amber .card:focus {
+    border: round #ffb703;
+}
+
+App.theme-sunset-amber .card-title {
+    color: #ffb703;
+}
+
+App.theme-sunset-amber Button.btn-primary {
+    background: #4a3400;
+    border: round #ffb703;
+    color: #ffb703;
+}
+
+App.theme-sunset-amber Button.btn-primary:focus {
+    background: #ffb703;
+    color: #14110e;
+}
+
+App.theme-sunset-amber Button:focus {
+    background: #fb8500;
+    border: round #ffd166;
+    color: #14110e;
+}
+
+App.theme-sunset-amber ListItem:focus {
+    background: #362919;
+    color: #ffb703;
+}
+
+App.theme-sunset-amber .dialog-box {
+    background: #1f1a15;
+    border: round #ffb703;
+}
+
+App.theme-sunset-amber .dialog-title {
+    color: #ffb703;
+    border-bottom: solid #3d3328;
+}
+
+App.theme-sunset-amber Input {
+    color: #ffb703;
+    border: round #3d3328;
+}
+
+App.theme-sunset-amber Input:focus {
+    border: round #ffb703;
+}
+
+App.theme-sunset-amber #log-viewer {
+    background: #0a0806;
+    border: round #ffb703;
+    color: #ffd166;
+}
+
+App.theme-sunset-amber Bar > .bar--bar {
+    color: #ffb703;
+    background: #362919;
+}
+
+App.theme-sunset-amber Bar > .bar--complete {
+    color: #fb8500;
+}
+
+
+/* ====================================================
+   THEME 7: MATRIX PHOSPHOR
+   ==================================================== */
+
+App.theme-matrix-retro Screen {
+    background: #000000;
+    color: #00ff00;
+}
+
+App.theme-matrix-retro #cyber-header {
+    background: #041004;
+    border-bottom: solid #00ff00;
+}
+
+App.theme-matrix-retro #header-title {
+    color: #00ff00;
+}
+
+App.theme-matrix-retro .card {
+    background: #041004;
+    border: round #004400;
+}
+
+App.theme-matrix-retro .card:focus {
+    border: round #00ff00;
+}
+
+App.theme-matrix-retro .card-title {
+    color: #00ff00;
+}
+
+App.theme-matrix-retro Button {
+    background: #061c06;
+    border: round #004400;
+    color: #00ff00;
+}
+
+App.theme-matrix-retro Button:focus {
+    background: #00ff00;
+    color: #000000;
+    border: round #00ff00;
+}
+
+App.theme-matrix-retro Button.btn-primary {
+    background: #042404;
+    border: round #00ff00;
+    color: #00ff00;
+}
+
+App.theme-matrix-retro Button.btn-primary:focus {
+    background: #00ff00;
+    color: #000000;
+}
+
+App.theme-matrix-retro ListItem {
+    background: #041004;
+    border-bottom: solid #002200;
+}
+
+App.theme-matrix-retro ListItem:focus {
+    background: #003300;
+    color: #39ff14;
+}
+
+App.theme-matrix-retro .dialog-box {
+    background: #041004;
+    border: round #00ff00;
+}
+
+App.theme-matrix-retro .dialog-title {
+    color: #00ff00;
+    border-bottom: solid #004400;
+}
+
+App.theme-matrix-retro Input {
+    color: #00ff00;
+    border: round #004400;
+}
+
+App.theme-matrix-retro Input:focus {
+    border: round #00ff00;
+}
+
+App.theme-matrix-retro #log-viewer {
+    background: #000000;
+    border: round #00ff00;
+    color: #00ff00;
+}
+
+App.theme-matrix-retro Bar > .bar--bar {
+    color: #00ff00;
+    background: #003300;
+}
+
+App.theme-matrix-retro Bar > .bar--complete {
+    color: #39ff14;
+}
+
+
+/* ====================================================
+   THEME 8: OLED MIDNIGHT DARK
+   ==================================================== */
+
+App.theme-oled-midnight Screen {
+    background: #000000;
+    color: #f0f0f0;
+}
+
+App.theme-oled-midnight #cyber-header {
+    background: #0a0a0a;
+    border-bottom: solid #00a8ff;
+}
+
+App.theme-oled-midnight #header-title {
+    color: #00a8ff;
+}
+
+App.theme-oled-midnight .card {
+    background: #0a0a0a;
+    border: round #222222;
+}
+
+App.theme-oled-midnight .card:focus {
+    border: round #00a8ff;
+}
+
+App.theme-oled-midnight .card-title {
+    color: #00a8ff;
+}
+
+App.theme-oled-midnight Button {
+    background: #111111;
+    border: round #222222;
+    color: #ffffff;
+}
+
+App.theme-oled-midnight Button:focus {
+    background: #00a8ff;
+    border: round #ffffff;
+    color: #000000;
+}
+
+App.theme-oled-midnight Button.btn-primary {
+    background: #00283d;
+    border: round #00a8ff;
+    color: #00a8ff;
+}
+
+App.theme-oled-midnight Button.btn-primary:focus {
+    background: #00a8ff;
+    color: #000000;
+}
+
+App.theme-oled-midnight ListItem:focus {
+    background: #141414;
+    color: #00a8ff;
+}
+
+App.theme-oled-midnight .dialog-box {
+    background: #0a0a0a;
+    border: round #00a8ff;
+}
+
+App.theme-oled-midnight .dialog-title {
+    color: #00a8ff;
+    border-bottom: solid #222222;
+}
+
+App.theme-oled-midnight Input {
+    color: #00a8ff;
+    border: round #222222;
+}
+
+App.theme-oled-midnight Input:focus {
+    border: round #00a8ff;
+}
+
+App.theme-oled-midnight #log-viewer {
+    background: #000000;
+    border: round #00a8ff;
+    color: #70cfff;
+}
+
+App.theme-oled-midnight Bar > .bar--bar {
+    color: #00a8ff;
+    background: #141414;
+}
+
+App.theme-oled-midnight Bar > .bar--complete {
+    color: #ffffff;
 }
