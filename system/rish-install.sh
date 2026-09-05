@@ -12,7 +12,29 @@ else
     log() { echo "- $1" >> "$STORAGE/rish_log.txt"; }
 fi
 
-rish_c() { rish -c "$@" | grep -v "^Entering shell\.\.\."; }
+# Android 17 (dev preview) with the thedjchi Shizuku fork prints an
+# "Entering shell..." banner (to stdout, and possibly stderr) before every
+# command. It is emitted via println(), so it is always on its own line and
+# the real command output follows it. We delete that banner line, and also
+# strip the banner as a prefix if anything follows it on the same line, so
+# captured output (e.g. `$(rish -c "...")`) is never polluted and real
+# success/error output keeps priority. The real rish exit code is preserved.
+rish() {
+    local _rish_err _rish_rc _rish_del _rish_strip
+    _rish_del='/^[[:space:]]*Entering shell\.\.*[[:space:]]*$/d'
+    _rish_strip='s/^[[:space:]]*Entering shell\.\.*[[:space:]]*//'
+    _rish_err=$(mktemp) 2>/dev/null
+    if [ -n "$_rish_err" ]; then
+        command rish "$@" 2>"$_rish_err" | sed -e "$_rish_del" -e "$_rish_strip"
+        _rish_rc=${PIPESTATUS[0]}
+        sed -e "$_rish_del" -e "$_rish_strip" "$_rish_err" >&2
+        rm -f "$_rish_err"
+    else
+        command rish "$@" | sed -e "$_rish_del" -e "$_rish_strip"
+        _rish_rc=${PIPESTATUS[0]}
+    fi
+    return "$_rish_rc"
+}
 
 log ""
 log "      Initiating rish installation"
@@ -21,7 +43,7 @@ log "app name: $APP_NAME"
 log "exported APK name: $EXPORTED_APK_NAME"
 log ""
 
-CURRENT_USER=$(rish_c "am get-current-user" 2>/dev/null | tr -d '\r\n' | xargs)
+CURRENT_USER=$(rish -c "am get-current-user" 2>/dev/null | tr -d '\r\n' | xargs)
 CURRENT_USER=${CURRENT_USER:-0}
 log "Current user: $CURRENT_USER"
 
@@ -54,9 +76,9 @@ if [ -n "$INSTALL_TYPE_OVERRIDE" ]; then
     log "Install type override provided: $INSTALL_TYPE"
 else
     INSTALL_TYPE="new"
-    if [ "$(rish_c "pm list packages --user current | grep -q $PKG_NAME && echo Installed")" == "Installed" ]; then
+    if [ "$(rish -c "pm list packages --user current | grep -q $PKG_NAME && echo Installed")" == "Installed" ]; then
         INSTALL_TYPE="update"
-        CURRENT_VERSION=$(rish_c "dumpsys package $PKG_NAME" | sed -n '/versionName/s/.*=//p' | sed -n '1p')
+        CURRENT_VERSION=$(rish -c "dumpsys package $PKG_NAME" | sed -n '/versionName/s/.*=//p' | sed -n '1p')
         log "Existing installation detected (v$CURRENT_VERSION) - this will be an UPDATE"
     else
         log "No existing installation detected - this will be a NEW INSTALL"
@@ -68,20 +90,20 @@ if [ -n "$STORAGE" ]; then
     log "Install type written to $STORAGE/install_type.txt: $INSTALL_TYPE"
 fi
 
-if [ "$(rish_c "[ -d '/data/local/tmp/enhancify' ] && echo Exists || echo Missing")" == "Missing" ]; then
-    rish_c "mkdir '/data/local/tmp/enhancify'"
+if [ "$(rish -c "[ -d '/data/local/tmp/enhancify' ] && echo Exists || echo Missing")" == "Missing" ]; then
+    rish -c "mkdir '/data/local/tmp/enhancify'"
     log "/data/local/tmp/enhancify created."
 fi
 
-if [ "$(rish_c "[ -e $PATCHED_APP_PATH ] && echo Exists || echo Missing")" == "Exists" ]; then
-    rish_c "rm $PATCHED_APP_PATH"
+if [ "$(rish -c "[ -e $PATCHED_APP_PATH ] && echo Exists || echo Missing")" == "Exists" ]; then
+    rish -c "rm $PATCHED_APP_PATH"
     log "Residual $PATCHED_APP_PATH deleted"
 fi
 
 log "Moving exported APK to /data/local/tmp/enhancify..."
-rish_c "mv -f $EXPORTED_APP_PATH $PATCHED_APP_PATH"
+rish -c "mv -f $EXPORTED_APP_PATH $PATCHED_APP_PATH"
 
-if [ "$(rish_c "[ -e $PATCHED_APP_PATH ] && echo Exists || echo Missing")" == "Missing" ]; then
+if [ "$(rish -c "[ -e $PATCHED_APP_PATH ] && echo Exists || echo Missing")" == "Missing" ]; then
     log "Failed to move patched APK to $PATCHED_APP_PATH"
     [ -n "$STORAGE" ] && echo "Failed to stage APK for installation (move to /data/local/tmp failed)" > "$STORAGE/install_error.txt"
     exit 1
@@ -100,7 +122,7 @@ if [ "$BYPASS_LOW_TARGET_SDK_BLOCK" == "on" ]; then
 fi
 
 CMD_RISH="pm install -r -i com.android.vending$INSTALL_FLAGS --user current $PATCHED_APP_PATH"
-OUTPUT=$(rish_c "$CMD_RISH" 2>&1)
+OUTPUT=$(rish -c "$CMD_RISH" 2>&1)
 log "Install command: $CMD_RISH"
 log "Install output: $OUTPUT"
 
@@ -126,7 +148,7 @@ parse_install_failure() {
 
 if echo "$OUTPUT" | grep -q "^Success"; then
     log "Install succeeded."
-    rish_c "rm -f $PATCHED_APP_PATH"
+    rish -c "rm -f $PATCHED_APP_PATH"
     [ -n "$STORAGE" ] && rm -f "$STORAGE/install_error.txt"
     exit 0
 else
@@ -137,6 +159,6 @@ else
     [ -n "$STORAGE" ] && echo "$FAILURE_REASON" > "$STORAGE/install_error.txt"
 
     log "Moving APK back to original location."
-    rish_c "mv -f $PATCHED_APP_PATH $EXPORTED_APP_PATH"
+    rish -c "mv -f $PATCHED_APP_PATH $EXPORTED_APP_PATH"
     exit 1
 fi
