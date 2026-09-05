@@ -1,12 +1,5 @@
 #!/usr/bin/bash
 
-# Android 17 (dev preview) with the thedjchi Shizuku fork prints an
-# "Entering shell..." banner (to stdout, and possibly stderr) before every
-# command. It is emitted via println(), so it is always on its own line and
-# the real command output follows it. We delete that banner line, and also
-# strip the banner as a prefix if anything follows it on the same line, so
-# captured output (e.g. `$(rish -c "...")`) is never polluted and real
-# success/error output keeps priority. The real rish exit code is preserved.
 rish() {
     local _rish_err _rish_rc _rish_del _rish_strip
     _rish_del='/^[[:space:]]*Entering shell\.\.*[[:space:]]*$/d'
@@ -34,19 +27,16 @@ else
     log() { echo "- $1" >> "$STORAGE/rish_log.txt"; }
 fi
 
-# Uninstall command
 if [ "$UNINSTALL_FROM_ALL_USERS" = true ]; then
     CMD_RISH="pm uninstall --user all $PKG_NAME"
 else
     CMD_RISH="pm uninstall --user current $PKG_NAME"
 fi
 
-# Execute the uninstall command using rish
 OUTPUT=$(rish -c "$CMD_RISH" 2>&1)
 log "Uninstall command: $CMD_RISH"
 log "Uninstall output: $OUTPUT"
 
-# Check the output for success or failure
 if echo "$OUTPUT" | grep -q "^Success"; then
     log "Uninstall succeeded."
     exit 0
