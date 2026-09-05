@@ -3,12 +3,30 @@
 managePatches() {
     local ENABLED_PATCHES_LIST BUTTON_TEXT PATCHES_ARRAY UPDATED_PATCHES CHOICES EXIT_CODE
     local PATCHES_JSON_FILE
+    local TERM_LINES TERM_COLS MAX_DESC_LEN BOX_HEIGHT LIST_HEIGHT
 
     if ! PATCHES_JSON_FILE=$(_available_patches_file); then
         PATCHES_JSON_FILE=$(mktemp)
         printf '%s\n' "${AVAILABLE_PATCHES:-[]}" > "$PATCHES_JSON_FILE"
     fi
-    
+
+    # dialog paints the highlighted patch's description on the very last line
+    # of the screen, so with a full-screen box it ended up drawn over the box
+    # border and chopped at the screen edge. End the box one line above it and
+    # trim descriptions so they always fit on that line.
+    TERM_LINES=$(tput lines 2>/dev/null)
+    TERM_COLS=$(tput cols 2>/dev/null)
+    [[ "$TERM_LINES" =~ ^[0-9]+$ ]] || TERM_LINES=24
+    [[ "$TERM_COLS" =~ ^[0-9]+$ ]] || TERM_COLS=80
+    (( TERM_LINES < 1 )) && TERM_LINES=24
+    (( TERM_COLS < 1 )) && TERM_COLS=80
+    MAX_DESC_LEN=$((TERM_COLS - 4))
+    (( MAX_DESC_LEN < 30 )) && MAX_DESC_LEN=30
+    BOX_HEIGHT=$((TERM_LINES - 3))
+    (( BOX_HEIGHT < 10 )) && BOX_HEIGHT=10
+    LIST_HEIGHT=$((TERM_LINES - 12))
+    (( LIST_HEIGHT < 1 )) && LIST_HEIGHT=1
+
     readarray -t ENABLED_PATCHES_LIST < <(
         jq -nrc --arg PKG_NAME "$PKG_NAME" --argjson ENABLED_PATCHES "$ENABLED_PATCHES" '
         $ENABLED_PATCHES |
@@ -40,8 +58,12 @@ managePatches() {
                     | gsub("[\\n\\r\\t]+"; " ")
                     | gsub("%"; "%%")
                     | if . == "" then "No description available" else . end
+                    | if length > $MAX_DESC_LEN
+                      then .[0:$MAX_DESC_LEN - 3] + "..."
+                      else .
+                      end
                 )
-            ' --args "${ENABLED_PATCHES_LIST[@]}"
+            ' --argjson MAX_DESC_LEN "$MAX_DESC_LEN" --args "${ENABLED_PATCHES_LIST[@]}"
         )
 
         if [ ${#PATCHES_ARRAY[@]} -eq 0 ] || [ $(( ${#PATCHES_ARRAY[@]} % 3 )) -ne 0 ]; then
@@ -60,7 +82,7 @@ managePatches() {
                 --cancel-label "$BUTTON_TEXT" \
                 --help-button \
                 --help-label "Back" \
-                --checklist "$NAVIGATION_HINT\n$SELECTION_HINT" -1 -1 0 \
+                --checklist "$NAVIGATION_HINT\n$SELECTION_HINT" "$BOX_HEIGHT" "$TERM_COLS" "$LIST_HEIGHT" \
                 "${PATCHES_ARRAY[@]}" 2>&1 > /dev/tty
         )
         EXIT_CODE=$?
