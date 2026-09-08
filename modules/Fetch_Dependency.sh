@@ -1,8 +1,5 @@
 #!/usr/bin/bash
 
-# "Fetch Dependency" submenu shown from the Main Menu (entry 5).
-# Option 1 opens the classic GmsCore provider dialog (Fetch_MicroG in
-# modules/Fetch_MicroG.sh), option 2 fetches PotHelper below.
 Fetch_Dependency() {
     while true; do
         local choice
@@ -232,7 +229,7 @@ Fetch_PotHelper() {
     fi
 
     local repo="MorpheApp/PotHelper"
-    local api_url="https://api.github.com/repos/$repo/releases/latest"
+    local api_url="https://api.github.com/repos/$repo/releases"
 
     "${curl_opts[@]}" "$api_url" > response.tmp
     response_headers=$(<headers.tmp)
