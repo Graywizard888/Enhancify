@@ -591,6 +591,7 @@ installDependencies() {
     grep -q aria2c <<< "$BINS" || PKGS+=("aria2")
     grep -q '^unzip$' <<< "$BINS" || PKGS+=("unzip")
     grep -q '^zip$' <<< "$BINS" || PKGS+=("zip")
+    grep -q '^python$' <<< "$BINS" || grep -q '^python3$' <<< "$BINS" || PKGS+=("python")
 
     if [ "${#PKGS[@]}" -ne 0 ]; then
         print_info "Installing packages: ${YELLOW}${PKGS[*]}${RESET}"
@@ -603,6 +604,13 @@ installDependencies() {
         if ! yes | pkg install "${PKGS[@]}" 2>&1; then
             fixLibraryIssues
             yes | pkg install "${PKGS[@]}" || return 1
+        fi
+    fi
+
+    if command -v python3 &>/dev/null; then
+        if ! python3 -c "import textual, rich, requests, bs4" &>/dev/null; then
+            print_info "Installing Python TUI dependencies (Textual, Rich, Requests, BeautifulSoup)..."
+            pip install textual rich requests beautifulsoup4 --break-system-packages &>/dev/null || pip install textual rich requests beautifulsoup4 &>/dev/null
         fi
     fi
 
@@ -750,8 +758,28 @@ echo ""
 
 sleep 1
 
-bash main.sh "$ROOT_ACCESS" "$RISH_ACCESS"
-EXIT_CODE=$?
+# Check for classic / dialog flag
+RUN_CLASSIC=false
+for arg in "$@"; do
+    if [ "$arg" == "--classic" ] || [ "$arg" == "--dialog" ]; then
+        RUN_CLASSIC=true
+        break
+    fi
+done
+
+if [ "$RUN_CLASSIC" == true ]; then
+    bash main.sh "$ROOT_ACCESS" "$RISH_ACCESS" "$@"
+    EXIT_CODE=$?
+else
+    # Launch Textual TUI with automatic fallback
+    if command -v python3 &>/dev/null && [ -f "$SRC/main.py" ]; then
+        python3 "$SRC/main.py" "$@"
+        EXIT_CODE=$?
+    else
+        bash main.sh "$ROOT_ACCESS" "$RISH_ACCESS" "$@"
+        EXIT_CODE=$?
+    fi
+fi
 
 if [ "$EXIT_CODE" -eq 0 ]; then
     print_success "Enhancify exited successfully"
