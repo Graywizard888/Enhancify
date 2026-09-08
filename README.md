@@ -98,7 +98,7 @@
 > - Extended file format support (XAPK)
 > - Custom source management system
 > - Optimize Libs (Aka Riplibs) for apk files
-> - GmsCore Downloader (Fetch GmsCore)
+> - Dependency Downloader (Fetch GmsCore / Fetch PotHelper)
 > - custom keystore management
 > - Rish Apk Installation Support
 > - Custom Github Token Support 
