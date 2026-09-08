@@ -32,7 +32,7 @@ showPotHelperChangelog() {
     local changelog_tmp="$HOME/Enhancify/pothelper_changelog.tmp"
     local changelog_display="$HOME/Enhancify/pothelper_changelog_display.tmp"
 
-    jq -r '.body // empty' <<< "$api_response" > "$changelog_tmp" 2>/dev/null
+    jq -r 'if type == "array" then .[0] else . end | .body // empty' <<< "$api_response" > "$changelog_tmp" 2>/dev/null
 
     [ ! -f "$changelog_tmp" ] && return 0
     [ ! -s "$changelog_tmp" ] && rm -f "$changelog_tmp" && return 0
@@ -244,11 +244,17 @@ Fetch_PotHelper() {
     rm -f headers.tmp response.tmp
 
     local tag_name
-    tag_name=$(jq -r '.tag_name' <<< "$api_response")
+    tag_name=$(jq -r 'if type == "array" then .[0] else . end | .tag_name // empty' <<< "$api_response")
+
+    [ -z "$tag_name" ] && {
+        notify msg "Failed to parse release info for PotHelper\nRetry later."
+        return 1
+    }
 
     local asset_info
     asset_info=$(jq -r '
-        .assets[]
+        if type == "array" then .[0] else . end
+        | .assets[]?
         | select(.name | endswith(".apk"))
         | [.browser_download_url, .size, .name]
         | @tsv
