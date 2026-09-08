@@ -223,7 +223,7 @@ Fetch_MicroG() {
         return 1
     fi
 
-    local api_url="https://api.github.com/repos/$repo/releases/latest"
+    local api_url="https://api.github.com/repos/$repo/releases"
 
     "${curl_opts[@]}" "$api_url" > response.tmp
     response_headers=$(<headers.tmp)
