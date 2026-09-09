@@ -1,7 +1,8 @@
 """
 Enhancify Special Features Module
-Handles GmsCore (MicroG) downloading, Bundle Patcher, Keystore Generation/Management,
-Storage Cleanups, Stock App Backups, and Specifications/Changelog.
+Handles Dependency downloading (GmsCore / PotHelper), Bundle Patcher,
+Keystore Generation/Management, Storage Cleanups, Stock App Backups,
+and Specifications/Changelog.
 """
 
 import json
@@ -22,6 +23,92 @@ from src.utils import download_file, format_size, run_command
 
 
 USER_AGENT_GITHUB = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Mobile Safari/537.36 EdgA/142.0.0.0"
+
+# Matches bash: $STORAGE/Dependencies
+DEPENDENCIES_SUBDIR = "Dependencies"
+POTHELPER_REPO = "MorpheApp/PotHelper"
+
+
+def _github_headers() -> Dict[str, str]:
+    headers = {
+        "Accept": "application/vnd.github+json",
+        "User-Agent": USER_AGENT_GITHUB,
+        "X-GitHub-Api-Version": "2022-11-28",
+    }
+    tok = config.get_github_token()
+    if tok:
+        headers["Authorization"] = f"Bearer {tok}"
+    return headers
+
+
+def _normalize_release_payload(data: Any) -> Optional[Dict[str, Any]]:
+    """Pick the newest release object whether API returned a list or a single object."""
+    if isinstance(data, list):
+        if not data:
+            return None
+        return data[0] if isinstance(data[0], dict) else None
+    if isinstance(data, dict):
+        return data
+    return None
+
+
+def _first_apk_asset(release: Dict[str, Any]) -> Optional[Tuple[str, int, str]]:
+    """Return (download_url, size, asset_name) for the first .apk asset."""
+    for asset in release.get("assets") or []:
+        if not isinstance(asset, dict):
+            continue
+        name = asset.get("name") or ""
+        if name.endswith(".apk"):
+            url = asset.get("browser_download_url") or ""
+            size = int(asset.get("size") or 0)
+            if url and size > 0:
+                return url, size, name
+    return None
+
+
+def _dependencies_dir(workspace_dir: Optional[Path] = None) -> Path:
+    """Resolve $STORAGE/Dependencies (bash parity)."""
+    if workspace_dir is not None:
+        path = workspace_dir / "storage" / DEPENDENCIES_SUBDIR
+    else:
+        path = env.storage_dir / DEPENDENCIES_SUBDIR
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def _fetch_repo_release(repo: str) -> Optional[Dict[str, Any]]:
+    """Fetch releases list for a GitHub repo and return normalized first release + apk asset info."""
+    url = f"https://api.github.com/repos/{repo}/releases"
+    try:
+        r = requests.get(url, headers=_github_headers(), timeout=12)
+        if r.status_code != 200:
+            return None
+        release = _normalize_release_payload(r.json())
+        if not release:
+            return None
+
+        tag_name = release.get("tag_name") or ""
+        if not tag_name:
+            return None
+
+        asset = _first_apk_asset(release)
+        if not asset:
+            return None
+
+        apk_url, apk_size, apk_name = asset
+        body = release.get("body") or "No changelog provided."
+        clean_tag = re.sub(r"[^a-zA-Z0-9._-]", "", tag_name)
+
+        return {
+            "tag": clean_tag,
+            "raw_tag": tag_name,
+            "url": apk_url,
+            "size": apk_size,
+            "changelog": body,
+            "asset_name": apk_name,
+        }
+    except Exception:
+        return None
 
 
 # ==========================================
@@ -44,72 +131,101 @@ GMSCORE_PROVIDERS = [
 
 
 class GmsCoreManager:
-    """Manages fetching and downloading GmsCore (MicroG) APKs."""
+    """Manages fetching and downloading GmsCore (MicroG) APKs into $STORAGE/Dependencies."""
 
     def __init__(self, workspace_dir: Optional[Path] = None):
         self.workspace_dir = workspace_dir or Path(__file__).resolve().parent.parent
-        self.storage_dir = (self.workspace_dir / "storage" / "GmsCore") if workspace_dir else (env.storage_dir / "GmsCore")
-        self.storage_dir.mkdir(parents=True, exist_ok=True)
+        self.storage_dir = _dependencies_dir(workspace_dir if workspace_dir else None)
 
     def fetch_provider_release(self, provider: GmsCoreProvider) -> Optional[Dict[str, Any]]:
-        """Fetch latest release info, APK download URL, and changelog for a GmsCore provider."""
-        headers = {
-            "Accept": "application/vnd.github+json",
-            "User-Agent": USER_AGENT_GITHUB,
-        }
-        tok = config.get_github_token()
-        if tok:
-            headers["Authorization"] = f"Bearer {tok}"
-
-        url = f"https://api.github.com/repos/{provider.repo}/releases/latest"
-        try:
-            r = requests.get(url, headers=headers, timeout=8)
-            if r.status_code != 200:
-                return None
-            data = r.json()
-
-            tag_name = data.get("tag_name", "")
-            body = data.get("body", "No changelog provided.")
-
-            apk_url = ""
-            apk_size = 0
-            apk_name = ""
-            for asset in data.get("assets", []):
-                name = asset.get("name", "")
-                if name.endswith(".apk"):
-                    apk_url = asset.get("browser_download_url", "")
-                    apk_size = int(asset.get("size", 0))
-                    apk_name = name
-                    break
-
-            if not apk_url:
-                return None
-
-            clean_tag = re.sub(r"[^a-zA-Z0-9._-]", "", tag_name)
-            target_filename = f"{provider.name.split()[0]}-{clean_tag}.apk"
-            target_path = self.storage_dir / target_filename
-
-            return {
-                "provider": provider.name.split()[0],
-                "tag": clean_tag,
-                "url": apk_url,
-                "size": apk_size,
-                "changelog": body,
-                "filename": target_filename,
-                "target_path": target_path,
-                "is_downloaded": target_path.exists() and target_path.stat().st_size == apk_size,
-            }
-        except Exception:
+        """Fetch newest release info, APK download URL, and changelog for a GmsCore provider."""
+        raw = _fetch_repo_release(provider.repo)
+        if not raw:
             return None
+
+        provider_label = provider.name.split()[0]
+        # Match bash: ${provider}-${clean_tag}.apk
+        target_filename = f"{provider_label}-{raw['tag']}.apk"
+        target_path = self.storage_dir / target_filename
+
+        return {
+            "kind": "gmscore",
+            "provider": provider_label,
+            "provider_full": provider.name,
+            "tag": raw["tag"],
+            "url": raw["url"],
+            "size": raw["size"],
+            "changelog": raw["changelog"],
+            "filename": target_filename,
+            "target_path": target_path,
+            "is_downloaded": target_path.exists() and target_path.stat().st_size == raw["size"],
+        }
 
     def download_gmscore(
         self,
         info: Dict[str, Any],
         progress_callback: Optional[Callable[[int, int, str], None]] = None,
     ) -> bool:
-        """Download GmsCore APK to $STORAGE/GmsCore/."""
+        """Download GmsCore APK to $STORAGE/Dependencies/."""
         target_path: Path = info["target_path"]
         target_path.parent.mkdir(parents=True, exist_ok=True)
+        # Remove previous builds for the same provider (bash: rm provider-*.apk)
+        provider = info.get("provider")
+        if provider:
+            for old in target_path.parent.glob(f"{provider}-*.apk"):
+                if old != target_path:
+                    old.unlink(missing_ok=True)
+        return download_file(info["url"], target_path, info["size"], progress_callback)
+
+
+# ==========================================
+# 1b. PotHelper Downloader
+# ==========================================
+
+class PotHelperManager:
+    """Manages fetching and downloading PotHelper APK into $STORAGE/Dependencies."""
+
+    REPO = POTHELPER_REPO
+
+    def __init__(self, workspace_dir: Optional[Path] = None):
+        self.workspace_dir = workspace_dir or Path(__file__).resolve().parent.parent
+        self.storage_dir = _dependencies_dir(workspace_dir if workspace_dir else None)
+
+    def fetch_release(self) -> Optional[Dict[str, Any]]:
+        """Fetch newest PotHelper release info and APK asset."""
+        raw = _fetch_repo_release(self.REPO)
+        if not raw:
+            return None
+
+        # Match bash: keep upstream asset filename
+        target_filename = raw["asset_name"]
+        target_path = self.storage_dir / target_filename
+
+        return {
+            "kind": "pothelper",
+            "provider": "PotHelper",
+            "provider_full": "PotHelper",
+            "tag": raw["tag"],
+            "url": raw["url"],
+            "size": raw["size"],
+            "changelog": raw["changelog"],
+            "filename": target_filename,
+            "target_path": target_path,
+            "is_downloaded": target_path.exists() and target_path.stat().st_size == raw["size"],
+        }
+
+    def download(
+        self,
+        info: Dict[str, Any],
+        progress_callback: Optional[Callable[[int, int, str], None]] = None,
+    ) -> bool:
+        """Download PotHelper APK to $STORAGE/Dependencies/."""
+        target_path: Path = info["target_path"]
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        # Match bash: rm pot-helper-*.apk before download
+        for old in target_path.parent.glob("pot-helper-*.apk"):
+            if old != target_path:
+                old.unlink(missing_ok=True)
         return download_file(info["url"], target_path, info["size"], progress_callback)
 
 
@@ -398,6 +514,7 @@ class StorageOperations:
 
 # Global feature manager instances
 gmscore_mgr = GmsCoreManager()
+pothelper_mgr = PotHelperManager()
 bundle_mgr = BundlePatcherManager()
 keystore_mgr = KeystoreManager()
 storage_ops = StorageOperations()

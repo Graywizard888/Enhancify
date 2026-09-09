@@ -1,38 +1,37 @@
 """
-Enhancify GmsCore (MicroG) Downloader Screen
-Fetches official GmsCore APKs (Wst_Xda, ReVanced, Rex) with release changelog
-and one-click download. Saves to Internal Storage/Enhancify/Dependencies/.
+Enhancify PotHelper Downloader Screen
+Fetches MorpheApp/PotHelper APK with release changelog and one-click download.
+Saves to Internal Storage/Enhancify/Dependencies/ (bash parity).
 """
 
 import shutil
 import subprocess
 from typing import Any, Dict, Optional
 
-from rich.text import Text
 from textual import work
 from textual.app import ComposeResult
 from textual.containers import Horizontal, ScrollableContainer, Vertical
 from textual.screen import Screen
-from textual.widgets import Button, Footer, Label, ListItem, ListView
+from textual.widgets import Button, Footer, Label
 
 from src.environment import env
-from src.features import GMSCORE_PROVIDERS, GmsCoreProvider, gmscore_mgr
+from src.features import pothelper_mgr
 from src.tui.widgets.dialogs import MessageDialog, ProgressModal
 from src.tui.widgets.header import CyberHeader
 from src.utils import format_size
 
 
-class GmsCoreScreen(Screen):
-    """GmsCore MicroG provider selection & downloader screen."""
+class PotHelperScreen(Screen):
+    """PotHelper release viewer & downloader screen."""
 
     BINDINGS = [
+        ("d", "download", "Download"),
         ("b", "back", "Back"),
         ("escape", "back", "Back"),
     ]
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.provider_releases: Dict[str, Dict[str, Any]] = {}
         self.selected_info: Optional[Dict[str, Any]] = None
 
     def compose(self) -> ComposeResult:
@@ -43,70 +42,54 @@ class GmsCoreScreen(Screen):
 
         with ScrollableContainer(classes="container-box"):
             with Vertical(classes="card"):
-                yield Label("🔌 Select GmsCore (MicroG) Provider", classes="card-title")
+                yield Label("🛠️  Fetch PotHelper", classes="card-title")
                 yield Label(
-                    "Choose a GmsCore build to view release notes and download.\n"
+                    "Download the latest PotHelper APK (MorpheApp/PotHelper).\n"
                     "Saved to: Internal Storage/Enhancify/Dependencies/",
                     classes="card-desc",
                 )
 
                 with Horizontal():
                     yield Button(
-                        "⚡ Download Selected APK",
+                        "🔄 Fetch Release Info",
+                        id="btn-fetch",
+                        classes="btn-primary",
+                    )
+                    yield Button(
+                        "⚡ Download APK  [D]",
                         id="btn-download",
                         classes="btn-primary",
                         disabled=True,
                     )
                     yield Button("🔙 Back [B]", id="btn-back", classes="btn-secondary")
 
-                yield ListView(id="gmscore-list")
-
             with Vertical(classes="card"):
                 yield Label("📋 Release Changelog", classes="card-title")
                 yield Label(
-                    "Select a provider above to load its release details.",
+                    "Tap 'Fetch Release Info' to load the latest PotHelper release.",
                     id="changelog-label",
                     classes="card-desc",
                 )
 
         yield Footer()
 
-    def on_mount(self) -> None:
-        self.populate_providers()
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        btn_id = event.button.id
+        if btn_id == "btn-fetch":
+            self.fetch_release()
+        elif btn_id == "btn-download":
+            self.action_download()
+        elif btn_id == "btn-back":
+            self.action_back()
 
-    def populate_providers(self) -> None:
-        """Populate list of GmsCore providers."""
-        g_list = self.query_one("#gmscore-list", ListView)
-        g_list.clear()
-
-        for idx, p in enumerate(GMSCORE_PROVIDERS):
-            txt = Text()
-            txt.append("📦 ", style="bold #00ff7f")
-            txt.append(f"{p.name:<25}", style="bold #ffffff")
-            txt.append(f" ({p.repo})", style="#00e5ff")
-
-            item = ListItem(Label(txt))
-            item.prov_idx = idx
-            g_list.append(item)
-
-    def on_list_view_selected(self, event: ListView.Selected) -> None:
-        idx = getattr(event.item, "prov_idx", None)
-        if idx is None and 0 <= event.index < len(GMSCORE_PROVIDERS):
-            idx = event.index
-        if idx is not None and 0 <= idx < len(GMSCORE_PROVIDERS):
-            provider = GMSCORE_PROVIDERS[idx]
-            self.load_provider_release(provider)
-
-    def load_provider_release(self, provider: GmsCoreProvider) -> None:
-        modal = ProgressModal(
-            "Fetching Release", f"Fetching release details for {provider.name}..."
-        )
+    def fetch_release(self) -> None:
+        modal = ProgressModal("Fetching Release", "Fetching PotHelper release details...")
         self.app.push_screen(modal)
-        self.run_fetch_worker(modal, provider)
+        self.run_fetch_worker(modal)
 
     @work(thread=True)
-    def run_fetch_worker(self, modal: ProgressModal, provider: GmsCoreProvider) -> None:
-        info = gmscore_mgr.fetch_provider_release(provider)
+    def run_fetch_worker(self, modal: ProgressModal) -> None:
+        info = pothelper_mgr.fetch_release()
         self.app.call_from_thread(modal.safe_dismiss)
 
         if not info:
@@ -114,7 +97,7 @@ class GmsCoreScreen(Screen):
                 self.app.push_screen,
                 MessageDialog(
                     "Error",
-                    f"Failed to fetch release info for {provider.name}!\n"
+                    "Failed to fetch PotHelper release info!\n"
                     "Check network / GitHub rate limits and retry.",
                 ),
             )
@@ -127,10 +110,10 @@ class GmsCoreScreen(Screen):
                 sz_str = format_size(info["size"])
                 status_str = " (Already Downloaded)" if info["is_downloaded"] else ""
                 desc = (
-                    f"Provider : {info['provider']}\n"
+                    f"Provider : PotHelper\n"
                     f"Version  : {info['tag']}{status_str}\n"
                     f"Size     : {sz_str}\n"
-                    f"Type     : GmsCore (MicroG)\n"
+                    f"Type     : PotHelper APK\n"
                     f"File     : {info['filename']}\n"
                     f"────────────────────────────────────────\n\n"
                     f"{info['changelog']}"
@@ -142,15 +125,9 @@ class GmsCoreScreen(Screen):
 
         self.app.call_from_thread(update_ui)
 
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        btn_id = event.button.id
-        if btn_id == "btn-download":
-            self.download_selected_gmscore()
-        elif btn_id == "btn-back":
-            self.action_back()
-
-    def download_selected_gmscore(self) -> None:
+    def action_download(self) -> None:
         if not self.selected_info:
+            self.fetch_release()
             return
 
         info = self.selected_info
@@ -163,21 +140,21 @@ class GmsCoreScreen(Screen):
             self.app.push_screen(
                 MessageDialog(
                     "Already Downloaded",
-                    f"✓ {info['provider']} GmsCore {info['tag']} already downloaded!\n"
+                    f"✓ PotHelper {info['tag']} already downloaded!\n"
                     f"Size: {format_size(info['size'])}\n\n"
                     f"Saved to:\n{info['target_path']}",
                 )
             )
             return
 
-        modal = ProgressModal("Downloading GmsCore", f"Downloading {info['filename']}...")
+        modal = ProgressModal("Downloading PotHelper", f"Downloading {info['filename']}...")
         self.app.push_screen(modal)
         self.run_download_worker(modal, info)
 
     @work(thread=True)
     def run_download_worker(self, modal: ProgressModal, info: Dict[str, Any]) -> None:
         try:
-            ok = gmscore_mgr.download_gmscore(
+            ok = pothelper_mgr.download(
                 info,
                 progress_callback=lambda cur, tot, pct: modal.update_message(
                     f"Downloading {info['filename']}: {pct}"
@@ -191,23 +168,23 @@ class GmsCoreScreen(Screen):
                         ["termux-open", "--view", str(info["target_path"])],
                         capture_output=True,
                     )
-
                 self.app.call_from_thread(
                     self.app.push_screen,
                     MessageDialog(
                         "Download Complete",
-                        f"✓ {info['provider']} GmsCore downloaded successfully!\n"
+                        f"✓ PotHelper downloaded successfully!\n"
                         f"Version: {info['tag']}\n"
                         f"Size: {format_size(info['size'])}\n"
                         f"Saved at: Internal Storage/Enhancify/Dependencies/{info['filename']}\n\n"
                         f"{info['target_path']}",
                     ),
                 )
+                # Refresh downloaded flag
                 info["is_downloaded"] = True
             else:
                 self.app.call_from_thread(
                     self.app.push_screen,
-                    MessageDialog("Download Failed", "Failed to download GmsCore APK!"),
+                    MessageDialog("Download Failed", "Failed to download PotHelper APK!"),
                 )
         except Exception as e:
             self.app.call_from_thread(modal.safe_dismiss)

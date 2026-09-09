@@ -23,7 +23,7 @@ class MainMenuScreen(Screen):
         ("t", "themes", "Themes"),
         ("b", "bundle_patcher", "Bundle Patcher"),
         ("c", "settings", "Settings"),
-        ("g", "gmscore", "GmsCore"),
+        ("g", "fetch_dependency", "Fetch Dependency"),
         ("d", "storage", "Storage"),
         ("i", "specs", "Specs"),
         ("q", "quit", "Exit"),
@@ -46,7 +46,7 @@ class MainMenuScreen(Screen):
                     yield Button("🎨 UI Themes  [T]", id="btn-themes")
                     yield Button("📦 Bundle Patcher (Experimental)  [B]", id="btn-bundle")
                     yield Button("⚙️  Configure & Settings  [C]", id="btn-settings")
-                    yield Button("🔌 Fetch GmsCore (MicroG)  [G]", id="btn-gmscore")
+                    yield Button("🔌 Fetch Dependency  [G]", id="btn-dependency")
                     yield Button("🗑️  Storage Manager  [D]", id="btn-storage")
                     yield Button("📋 Specs & Changelog  [I]", id="btn-specs")
 
@@ -69,8 +69,8 @@ class MainMenuScreen(Screen):
             self.action_bundle_patcher()
         elif btn_id == "btn-settings":
             self.action_settings()
-        elif btn_id == "btn-gmscore":
-            self.action_gmscore()
+        elif btn_id == "btn-dependency":
+            self.action_fetch_dependency()
         elif btn_id == "btn-storage":
             self.action_storage()
         elif btn_id == "btn-specs":
@@ -97,8 +97,8 @@ class MainMenuScreen(Screen):
     def action_settings(self) -> None:
         self.app.push_screen("settings_screen")
 
-    def action_gmscore(self) -> None:
-        self.app.push_screen("gmscore_screen")
+    def action_fetch_dependency(self) -> None:
+        self.app.push_screen("dependency_select_screen")
 
     def action_storage(self) -> None:
         self.app.push_screen("storage_mgr_screen")

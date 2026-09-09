@@ -11,7 +11,17 @@ from pathlib import Path
 from src.antisplit import AntiSplitManager
 from src.config import ConfigManager
 from src.environment import Environment
-from src.features import BundlePatcherManager, KeystoreManager, StorageOperations
+from src.features import (
+    BundlePatcherManager,
+    DEPENDENCIES_SUBDIR,
+    GMSCORE_PROVIDERS,
+    GmsCoreManager,
+    KeystoreManager,
+    PotHelperManager,
+    StorageOperations,
+    _first_apk_asset,
+    _normalize_release_payload,
+)
 from src.patches import PatchesManager
 from src.sources import SourcesManager
 from src.theme import THEMES, get_current_theme, set_current_theme
@@ -115,6 +125,40 @@ class TestEnhancifyCore(unittest.TestCase):
         (self.workspace / "apps" / "YouTube").mkdir(parents=True)
         (self.workspace / "apps" / "YouTube" / "stock.apk").write_text("dummy apk")
         self.assertEqual(so.delete_workspace_apps(), 1)
+
+    def test_dependency_managers_storage_path(self):
+        """GmsCore + PotHelper must save under $STORAGE/Dependencies (bash parity)."""
+        gm = GmsCoreManager(self.workspace)
+        ph = PotHelperManager(self.workspace)
+        expected = self.workspace / "storage" / DEPENDENCIES_SUBDIR
+        self.assertEqual(gm.storage_dir, expected)
+        self.assertEqual(ph.storage_dir, expected)
+        self.assertTrue(expected.exists())
+        self.assertEqual(len(GMSCORE_PROVIDERS), 3)
+        self.assertEqual(PotHelperManager.REPO, "MorpheApp/PotHelper")
+
+    def test_release_payload_helpers(self):
+        """Release list/object normalization matches bash jq 'if type == array then .[0]'."""
+        self.assertIsNone(_normalize_release_payload([]))
+        self.assertIsNone(_normalize_release_payload(None))
+        single = {"tag_name": "v1.0", "assets": []}
+        self.assertEqual(_normalize_release_payload(single)["tag_name"], "v1.0")
+        multi = [{"tag_name": "v2.0", "assets": []}, {"tag_name": "v1.0", "assets": []}]
+        self.assertEqual(_normalize_release_payload(multi)["tag_name"], "v2.0")
+
+        release = {
+            "assets": [
+                {"name": "notes.txt", "browser_download_url": "http://x/notes", "size": 10},
+                {"name": "app.apk", "browser_download_url": "http://x/app.apk", "size": 99},
+            ]
+        }
+        asset = _first_apk_asset(release)
+        self.assertIsNotNone(asset)
+        url, size, name = asset
+        self.assertEqual(name, "app.apk")
+        self.assertEqual(size, 99)
+        self.assertEqual(url, "http://x/app.apk")
+        self.assertIsNone(_first_apk_asset({"assets": []}))
 
     def test_theme_manager(self):
         self.assertGreaterEqual(len(THEMES), 8)

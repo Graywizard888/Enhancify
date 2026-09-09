@@ -14,12 +14,14 @@ from src.theme import THEME_MAP, THEMES, get_current_theme
 from src.tui.screens.app_select import AppSelectScreen
 from src.tui.screens.bundle_patcher import BundlePatcherScreen
 from src.tui.screens.custom_sources import CustomSourcesScreen
+from src.tui.screens.dependency_select import DependencySelectScreen
 from src.tui.screens.gmscore import GmsCoreScreen
 from src.tui.screens.keystore_mgr import KeystoreManagerScreen
 from src.tui.screens.main_menu import MainMenuScreen
 from src.tui.screens.options_edit import OptionsEditScreen
 from src.tui.screens.patch_progress import PatchProgressScreen
 from src.tui.screens.patch_select import PatchSelectScreen
+from src.tui.screens.pothelper import PotHelperScreen
 from src.tui.screens.settings import SettingsScreen
 from src.tui.screens.source_select import SourceSelectScreen
 from src.tui.screens.specs import SpecsScreen
@@ -55,7 +57,9 @@ class EnhancifyApp(App):
         "token_mgr_screen": TokenManagerScreen,
         "storage_mgr_screen": StorageManagerScreen,
         "specs_screen": SpecsScreen,
+        "dependency_select_screen": DependencySelectScreen,
         "gmscore_screen": GmsCoreScreen,
+        "pothelper_screen": PotHelperScreen,
         "bundle_patcher_screen": BundlePatcherScreen,
         "unmount_screen": UnmountScreen,
     }
