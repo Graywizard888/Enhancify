@@ -19,7 +19,9 @@ import requests
 
 from src.config import config
 from src.environment import env
-from src.utils import download_file, format_size, run_command
+import threading
+
+from src.utils import DownloadResult, download_file, download_file_ex, format_size, run_command
 
 
 USER_AGENT_GITHUB = "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Mobile Safari/537.36 EdgA/142.0.0.0"
@@ -165,7 +167,8 @@ class GmsCoreManager:
         self,
         info: Dict[str, Any],
         progress_callback: Optional[Callable[[int, int, str], None]] = None,
-    ) -> bool:
+        cancel_event: Optional[threading.Event] = None,
+    ) -> DownloadResult:
         """Download GmsCore APK to $STORAGE/Dependencies/."""
         target_path: Path = info["target_path"]
         target_path.parent.mkdir(parents=True, exist_ok=True)
@@ -175,7 +178,9 @@ class GmsCoreManager:
             for old in target_path.parent.glob(f"{provider}-*.apk"):
                 if old != target_path:
                     old.unlink(missing_ok=True)
-        return download_file(info["url"], target_path, info["size"], progress_callback)
+        return download_file_ex(
+            info["url"], target_path, info["size"], progress_callback, cancel_event=cancel_event
+        )
 
 
 # ==========================================
@@ -218,7 +223,8 @@ class PotHelperManager:
         self,
         info: Dict[str, Any],
         progress_callback: Optional[Callable[[int, int, str], None]] = None,
-    ) -> bool:
+        cancel_event: Optional[threading.Event] = None,
+    ) -> DownloadResult:
         """Download PotHelper APK to $STORAGE/Dependencies/."""
         target_path: Path = info["target_path"]
         target_path.parent.mkdir(parents=True, exist_ok=True)
@@ -226,7 +232,9 @@ class PotHelperManager:
         for old in target_path.parent.glob("pot-helper-*.apk"):
             if old != target_path:
                 old.unlink(missing_ok=True)
-        return download_file(info["url"], target_path, info["size"], progress_callback)
+        return download_file_ex(
+            info["url"], target_path, info["size"], progress_callback, cancel_event=cancel_event
+        )
 
 
 # ==========================================

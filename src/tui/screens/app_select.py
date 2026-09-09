@@ -18,8 +18,14 @@ from src.assets import AssetReleaseInfo, assets_mgr
 from src.config import config
 from src.environment import env
 from src.tui.screens.file_picker import FilePickerScreen
-from src.tui.widgets.dialogs import MessageDialog, ProgressModal
+from src.tui.widgets.dialogs import (
+    DownloadProgressModal,
+    MessageDialog,
+    ParseProgressModal,
+    ProgressModal,
+)
 from src.tui.widgets.header import CyberHeader
+from src.utils import DownloadResult
 
 
 class AppSelectScreen(Screen):
@@ -67,64 +73,196 @@ class AppSelectScreen(Screen):
 
     def load_source_apps(self) -> None:
         """Ensure assets are downloaded and load supported apps."""
-        modal = ProgressModal("Loading Assets", f"Fetching metadata for {self.active_source}...")
+        # Phase 1: lightweight fetch of release metadata
+        modal = ProgressModal(
+            "Loading Assets", f"Fetching metadata for {self.active_source}..."
+        )
         self.app.push_screen(modal)
         self.run_assets_worker(modal)
 
     @work(thread=True)
     def run_assets_worker(self, modal: ProgressModal) -> None:
+        cancelled = False
         try:
             rel = assets_mgr.fetch_source_release_info(self.active_source)
             if not rel:
                 self.app.call_from_thread(modal.safe_dismiss)
                 self.app.call_from_thread(
                     self.app.push_screen,
-                    MessageDialog("Error", f"Failed to fetch release info for {self.active_source}!")
+                    MessageDialog(
+                        "Error",
+                        f"Failed to fetch release info for {self.active_source}!",
+                    ),
                 )
                 return
 
             self.release_info = rel
-            # Download binaries
-            modal.update_message(f"Downloading {self.active_source} patches & CLI...")
-            assets_mgr.download_assets(rel)
+            self.app.call_from_thread(modal.safe_dismiss)
+
+            # Phase 2: download CLI + Patches with original gauge texts + cancel
+            pending = []
+            cli_label = f"CLI-{rel.cli_version}.jar"
+            patches_label = f"Patches-{rel.patches_version}.{rel.patches_ext}"
+            cli_path = assets_mgr.assets_dir / cli_label
+            patches_path = (
+                assets_mgr.assets_dir
+                / rel.source_name
+                / patches_label
+            )
+            need_cli = not (
+                cli_path.exists()
+                and (rel.cli_size <= 0 or cli_path.stat().st_size == rel.cli_size)
+            ) and not assets_mgr.get_cached_cli(rel.source_name, rel.cli_version, cli_path)
+            # get_cached_cli may have just populated cli_path
+            if cli_path.exists() and (rel.cli_size <= 0 or cli_path.stat().st_size == rel.cli_size):
+                need_cli = False
+            need_patches = not (
+                patches_path.exists()
+                and (rel.patches_size <= 0 or patches_path.stat().st_size == rel.patches_size)
+            )
+            if need_cli:
+                pending.append((cli_label, rel.cli_size))
+            if need_patches:
+                pending.append((patches_label, rel.patches_size))
+
+            dl_result = DownloadResult.OK
+            if pending:
+                total_sz = sum(s for _, s in pending if s > 0)
+                if len(pending) > 1:
+                    dl_modal = DownloadProgressModal.for_assets_batch(
+                        len(pending), total_sz, accelerated=True
+                    )
+                else:
+                    dl_modal = DownloadProgressModal.for_asset_file(
+                        pending[0][0], pending[0][1]
+                    )
+
+                # Push download modal on UI thread and wait briefly for mount
+                ready = __import__("threading").Event()
+
+                def _push():
+                    self.app.push_screen(dl_modal)
+                    ready.set()
+
+                self.app.call_from_thread(_push)
+                ready.wait(timeout=2.0)
+
+                def on_file_start(label: str, size: int) -> None:
+                    dl_modal.switch_to_asset_file(label, size)
+
+                def on_prog(label: str, cur: int, tot: int, pct: str) -> None:
+                    dl_modal.on_progress(cur, tot, pct)
+
+                dl_result = assets_mgr.download_assets(
+                    rel,
+                    progress_callback=on_prog,
+                    cancel_event=dl_modal.cancel_event,
+                    file_start_callback=on_file_start,
+                )
+                self.app.call_from_thread(
+                    dl_modal.safe_dismiss,
+                    "cancelled" if dl_result == DownloadResult.CANCELLED else None,
+                )
+                if dl_result == DownloadResult.CANCELLED:
+                    cancelled = True
+                    self.app.call_from_thread(
+                        self.app.push_screen,
+                        MessageDialog("Cancelled", "Asset download cancelled."),
+                    )
+                    return
+                if dl_result != DownloadResult.OK:
+                    self.app.call_from_thread(
+                        self.app.push_screen,
+                        MessageDialog(
+                            "Download Failed",
+                            "Unable to download CLI / Patches completely.\n\n"
+                            "Retry or change your Network.",
+                        ),
+                    )
+                    return
 
             # Detect capabilities
             cli_jar = assets_mgr.assets_dir / f"CLI-{rel.cli_version}.jar"
             assets_mgr.detect_cli_capabilities(cli_jar)
 
-            # Load patches json
-            modal.update_message("Parsing patches metadata...")
-            patches_json = assets_mgr.load_or_fetch_patches_json(self.active_source, rel)
+            # Phase 3: parse patches list (API or CLI) with gradient spinner
+            parse_modal = ParseProgressModal(self.active_source, from_cli=True)
+            ready2 = __import__("threading").Event()
+
+            def _push_parse():
+                self.app.push_screen(parse_modal)
+                ready2.set()
+
+            self.app.call_from_thread(_push_parse)
+            ready2.wait(timeout=2.0)
+
+            def phase_cb(phase: str) -> None:
+                if phase == "api":
+                    parse_modal.set_phase_api()
+                else:
+                    parse_modal.set_phase_cli()
+
+            patches_json = assets_mgr.load_or_fetch_patches_json(
+                self.active_source,
+                rel,
+                progress_callback=lambda msg: parse_modal.update_message(msg),
+                parse_progress_callback=parse_modal.on_parse_progress,
+                cancel_event=parse_modal.cancel_event,
+                phase_callback=phase_cb,
+            )
+            was_cancel = parse_modal.was_cancelled
+            self.app.call_from_thread(
+                parse_modal.safe_dismiss,
+                "cancelled" if was_cancel else None,
+            )
+            if was_cancel:
+                cancelled = True
+                self.app.call_from_thread(
+                    self.app.push_screen,
+                    MessageDialog("Cancelled", "Patches list generation cancelled."),
+                )
+                return
 
             if patches_json:
-                # Extract apps list
                 apps = []
                 for entry in patches_json:
                     pname = entry.get("pkgName")
                     if pname:
-                        # Format clean display name
                         clean_name = pname.split(".")[-1].capitalize()
-                        if "youtube" in pname.lower():
-                            clean_name = "YouTube" if "music" not in pname.lower() else "YouTube Music"
-                        elif "twitter" in pname.lower() or "x" == clean_name.lower():
+                        pl = pname.lower()
+                        if "youtube" in pl:
+                            clean_name = (
+                                "YouTube" if "music" not in pl else "YouTube Music"
+                            )
+                        elif "twitter" in pl or clean_name.lower() == "x":
                             clean_name = "Twitter / X"
-                        elif "reddit" in pname.lower():
+                        elif "reddit" in pl:
                             clean_name = "Reddit"
-                        elif "spotify" in pname.lower():
+                        elif "spotify" in pl:
                             clean_name = "Spotify"
 
                         apkmirror_name = clean_name.lower().replace(" ", "-")
-
-                        apps.append({
-                            "pkgName": pname,
-                            "appName": clean_name,
-                            "apkmirrorAppName": apkmirror_name,
-                            "versions": entry.get("versions", []),
-                        })
+                        apps.append(
+                            {
+                                "pkgName": pname,
+                                "appName": clean_name,
+                                "apkmirrorAppName": apkmirror_name,
+                                "versions": entry.get("versions", []),
+                            }
+                        )
                 self.apps_data = sorted(apps, key=lambda x: x["appName"])
+        except Exception as e:
+            try:
+                self.app.call_from_thread(modal.safe_dismiss)
+            except Exception:
+                pass
+            self.app.call_from_thread(
+                self.app.push_screen,
+                MessageDialog("Error", f"Asset load failed: {e}"),
+            )
         finally:
-            self.app.call_from_thread(modal.safe_dismiss)
-            self.app.call_from_thread(self.filter_and_display_apps)
+            if not cancelled:
+                self.app.call_from_thread(self.filter_and_display_apps)
 
     def filter_and_display_apps(self, query: str = "") -> None:
         """Filter app list by search text and render in ListView."""

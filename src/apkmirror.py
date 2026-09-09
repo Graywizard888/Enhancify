@@ -19,7 +19,9 @@ from bs4 import BeautifulSoup
 
 from src.config import config
 from src.environment import env
-from src.utils import download_file
+import threading
+
+from src.utils import DownloadResult, download_file, download_file_ex
 
 
 USER_AGENT = "APKUpdater-3.0.3"
@@ -333,8 +335,13 @@ class APKMirrorScraper:
         ext: str,
         expected_size: int = 0,
         progress_callback: Optional[Callable[[int, int, str], None]] = None,
+        cancel_event: Optional[threading.Event] = None,
     ) -> Optional[Path]:
-        """Download APK / APKM to apps/<APP_NAME>/<version>.<ext>."""
+        """Download APK / APKM to apps/<APP_NAME>/<version>.<ext>.
+
+        Returns path on success, None on failure/cancel. Check cancel_event
+        to distinguish cancel from error if needed.
+        """
         target_dir = self.apps_dir / app_name
         target_dir.mkdir(parents=True, exist_ok=True)
         target_file = target_dir / f"{version}.{ext}"
@@ -350,10 +357,15 @@ class APKMirrorScraper:
         if target_file.exists() and (expected_size <= 0 or target_file.stat().st_size == expected_size):
             return target_file
 
-        success = download_file(download_url, target_file, expected_size, progress_callback)
-        if success and target_file.exists():
+        result = download_file_ex(
+            download_url,
+            target_file,
+            expected_size,
+            progress_callback,
+            cancel_event=cancel_event,
+        )
+        if result == DownloadResult.OK and target_file.exists():
             new_size = target_file.stat().st_size
-            # Update .data size
             data_lines[2] = f"APP_SIZE='{new_size}'"
             (target_dir / ".data").write_text("\n".join(data_lines) + "\n", encoding="utf-8")
             return target_file

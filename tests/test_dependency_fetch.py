@@ -190,10 +190,16 @@ class TestGmsCoreManager(unittest.TestCase):
                 progress_callback(5, 5, "100%")
             return True
 
-        with mock.patch("src.features.download_file", side_effect=fake_download) as dl:
+        with mock.patch("src.features.download_file_ex", side_effect=fake_download) as dl:
+            from src.utils import DownloadResult
+            # fake_download returns True; wrap via side_effect that returns OK
+            def fake_ex(*a, **k):
+                fake_download(*a, **{kk: vv for kk, vv in k.items() if kk != "cancel_event"})
+                return DownloadResult.OK
+            dl.side_effect = fake_ex
             ok = self.mgr.download_gmscore(info)
 
-        self.assertTrue(ok)
+        self.assertEqual(ok.value if hasattr(ok, "value") else ok, "ok")
         self.assertTrue(info["target_path"].exists())
         self.assertFalse(old.exists(), "old provider apk should be removed")
         self.assertTrue(other.exists(), "other provider apk must be kept")
@@ -252,10 +258,16 @@ class TestPotHelperManager(unittest.TestCase):
             Path(path).write_bytes(b"new!")
             return True
 
-        with mock.patch("src.features.download_file", side_effect=fake_download):
+        from src.utils import DownloadResult
+
+        def fake_ex(*a, **k):
+            fake_download(*a, **{kk: vv for kk, vv in k.items() if kk != "cancel_event"})
+            return DownloadResult.OK
+
+        with mock.patch("src.features.download_file_ex", side_effect=fake_ex):
             ok = self.mgr.download(info)
 
-        self.assertTrue(ok)
+        self.assertEqual(ok, DownloadResult.OK)
         self.assertTrue(info["target_path"].exists())
         self.assertFalse(old.exists())
         self.assertTrue(keep.exists())
@@ -400,10 +412,16 @@ class TestEndToEndMockedDownload(unittest.TestCase):
                     progress_callback(size, size, "100%")
                 return True
 
-            with mock.patch("src.features.download_file", side_effect=fake_dl):
+            from src.utils import DownloadResult
+
+            def fake_ex(url, path, expected_size=0, progress_callback=None, headers=None, cancel_event=None):
+                fake_dl(url, path, expected_size, progress_callback, headers)
+                return DownloadResult.OK
+
+            with mock.patch("src.features.download_file_ex", side_effect=fake_ex):
                 ok = mgr.download_gmscore(info, progress_callback=lambda c, t, p: progress.append(p))
 
-            self.assertTrue(ok)
+            self.assertEqual(ok, DownloadResult.OK)
             self.assertTrue(info["target_path"].exists())
             self.assertEqual(info["target_path"].stat().st_size, size)
             self.assertEqual(progress, ["100%"])
@@ -435,10 +453,16 @@ class TestEndToEndMockedDownload(unittest.TestCase):
                 Path(path).write_bytes(b"B" * size)
                 return True
 
-            with mock.patch("src.features.download_file", side_effect=fake_dl):
+            from src.utils import DownloadResult
+
+            def fake_ex(url, path, expected_size=0, progress_callback=None, headers=None, cancel_event=None):
+                fake_dl(url, path, expected_size, progress_callback, headers)
+                return DownloadResult.OK
+
+            with mock.patch("src.features.download_file_ex", side_effect=fake_ex):
                 ok = mgr.download(info)
 
-            self.assertTrue(ok)
+            self.assertEqual(ok, DownloadResult.OK)
             self.assertTrue(info["target_path"].exists())
             self.assertFalse(stale.exists())
             self.assertEqual(info["target_path"].read_bytes(), b"B" * size)

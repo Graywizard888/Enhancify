@@ -18,7 +18,7 @@ from src.antisplit import antisplit_mgr
 from src.apkmirror import ScrapedVersion, apkmirror_scraper
 from src.config import config
 from src.environment import env
-from src.tui.widgets.dialogs import MessageDialog, ProgressModal
+from src.tui.widgets.dialogs import DownloadProgressModal, MessageDialog, ProgressModal
 from src.tui.widgets.header import CyberHeader
 
 
@@ -134,40 +134,68 @@ class VersionSelectScreen(Screen):
         app_info = getattr(self.app, "selected_app", {})
         app_name = app_info.get("appName", "")
 
-        modal = ProgressModal("Downloading App", f"Scraping download link for {app_name} {selected_version.version}...")
+        # Original bash scrape gauge text
+        modal = DownloadProgressModal.for_app_scrape(app_name, selected_version.version)
         self.app.push_screen(modal)
         self.run_download_worker(modal, selected_version)
 
     @work(thread=True)
-    def run_download_worker(self, modal: ProgressModal, selected_version: ScrapedVersion) -> None:
+    def run_download_worker(
+        self, modal: DownloadProgressModal, selected_version: ScrapedVersion
+    ) -> None:
         app_info = getattr(self.app, "selected_app", {})
         app_name = app_info.get("appName", "")
 
         try:
             # 1. Scrape link
             dl_info = apkmirror_scraper.scrape_download_link(selected_version.url)
+            if modal.was_cancelled:
+                self.app.call_from_thread(modal.safe_dismiss, "cancelled")
+                return
             if not dl_info:
                 self.app.call_from_thread(modal.safe_dismiss)
                 self.app.call_from_thread(
                     self.app.push_screen,
-                    MessageDialog("Download Error", f"Failed to scrape download link for {selected_version.version}!")
+                    MessageDialog(
+                        "Download Error",
+                        f"Failed to scrape download link for {selected_version.version}!",
+                    ),
                 )
                 return
 
             dl_url, app_format, size_bytes, ext = dl_info
 
-            # 2. Download file
-            modal.update_message(f"Downloading {app_name} {selected_version.version} ({ext.upper()})...")
+            # 2. Switch body to original File/Size/Downloading... text + start download
+            modal.switch_to_app_download(
+                app_name, selected_version.version, ext, size_bytes
+            )
 
             downloaded_file = apkmirror_scraper.download_app(
-                app_name, selected_version.version, dl_url, ext, size_bytes
+                app_name,
+                selected_version.version,
+                dl_url,
+                ext,
+                size_bytes,
+                progress_callback=modal.on_progress,
+                cancel_event=modal.cancel_event,
             )
+
+            if modal.was_cancelled:
+                self.app.call_from_thread(modal.safe_dismiss, "cancelled")
+                self.app.call_from_thread(
+                    self.app.push_screen,
+                    MessageDialog("Cancelled", "App download cancelled."),
+                )
+                return
 
             if not downloaded_file or not downloaded_file.exists():
                 self.app.call_from_thread(modal.safe_dismiss)
                 self.app.call_from_thread(
                     self.app.push_screen,
-                    MessageDialog("Download Failed", "Unable to complete file download!")
+                    MessageDialog(
+                        "Download Failed",
+                        "Oh No !!\nUnable to complete download. Please Check your internet connection and Retry.",
+                    ),
                 )
                 return
 
@@ -181,16 +209,19 @@ class VersionSelectScreen(Screen):
                     self.app.call_from_thread(modal.safe_dismiss)
                     self.app.call_from_thread(
                         self.app.push_screen,
-                        MessageDialog("Merge Error", "Failed to merge APKM splits!")
+                        MessageDialog("Merge Error", "Failed to merge APKM splits!"),
                     )
                     return
             elif ext == "apk" and config.is_on("OPTIMIZE_LIBS"):
-                modal.update_message("Optimizing native libraries for device architecture...")
+                modal.update_message(
+                    "Optimizing native libraries for device architecture..."
+                )
                 antisplit_mgr.optimize_native_libs(downloaded_file)
 
-            # Update selected_app state
             self.app.selected_app["version"] = selected_version.version
-            self.app.selected_app["apk_path"] = target_apk if target_apk.exists() else downloaded_file
+            self.app.selected_app["apk_path"] = (
+                target_apk if target_apk.exists() else downloaded_file
+            )
 
             self.app.call_from_thread(modal.safe_dismiss)
             self.app.call_from_thread(self.app.push_screen, "patch_select_screen")
@@ -198,7 +229,7 @@ class VersionSelectScreen(Screen):
             self.app.call_from_thread(modal.safe_dismiss)
             self.app.call_from_thread(
                 self.app.push_screen,
-                MessageDialog("Error", f"Error during download process: {e}")
+                MessageDialog("Error", f"Error during download process: {e}"),
             )
 
     def on_button_pressed(self, event: Button.Pressed) -> None:

@@ -16,9 +16,9 @@ from textual.widgets import Button, Footer, Label
 
 from src.environment import env
 from src.features import pothelper_mgr
-from src.tui.widgets.dialogs import MessageDialog, ProgressModal
+from src.tui.widgets.dialogs import DownloadProgressModal, MessageDialog, ProgressModal
 from src.tui.widgets.header import CyberHeader
-from src.utils import format_size
+from src.utils import DownloadResult, format_size
 
 
 class PotHelperScreen(Screen):
@@ -147,22 +147,35 @@ class PotHelperScreen(Screen):
             )
             return
 
-        modal = ProgressModal("Downloading PotHelper", f"Downloading {info['filename']}...")
+        modal = DownloadProgressModal.for_dependency(
+            info["filename"], info["size"], title="| Downloading PotHelper |"
+        )
         self.app.push_screen(modal)
         self.run_download_worker(modal, info)
 
     @work(thread=True)
-    def run_download_worker(self, modal: ProgressModal, info: Dict[str, Any]) -> None:
+    def run_download_worker(
+        self, modal: DownloadProgressModal, info: Dict[str, Any]
+    ) -> None:
         try:
-            ok = pothelper_mgr.download(
+            result = pothelper_mgr.download(
                 info,
-                progress_callback=lambda cur, tot, pct: modal.update_message(
-                    f"Downloading {info['filename']}: {pct}"
-                ),
+                progress_callback=modal.on_progress,
+                cancel_event=modal.cancel_event,
             )
-            self.app.call_from_thread(modal.safe_dismiss)
+            self.app.call_from_thread(
+                modal.safe_dismiss,
+                "cancelled" if result == DownloadResult.CANCELLED else None,
+            )
 
-            if ok and info["target_path"].exists():
+            if result == DownloadResult.CANCELLED:
+                self.app.call_from_thread(
+                    self.app.push_screen,
+                    MessageDialog("Cancelled", "PotHelper download cancelled."),
+                )
+                return
+
+            if result == DownloadResult.OK and info["target_path"].exists():
                 if shutil.which("termux-open"):
                     subprocess.run(
                         ["termux-open", "--view", str(info["target_path"])],
@@ -179,7 +192,6 @@ class PotHelperScreen(Screen):
                         f"{info['target_path']}",
                     ),
                 )
-                # Refresh downloaded flag
                 info["is_downloaded"] = True
             else:
                 self.app.call_from_thread(

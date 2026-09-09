@@ -900,3 +900,73 @@ App.theme-oled-midnight Bar > .bar--bar {
 App.theme-oled-midnight Bar > .bar--complete {
     color: #ffffff;
 }
+
+
+/* === DOWNLOAD / PARSE PROGRESS (gradient) === */
+.download-dialog {
+    width: 90%;
+    max-width: 72;
+    min-width: 40;
+}
+
+.download-meta {
+    color: #c9d1d9;
+    text-align: left;
+    margin-bottom: 0;
+}
+
+.download-detail {
+    color: #8b949e;
+    text-align: center;
+    height: 1;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.download-cancel-row {
+    layout: horizontal;
+    align-horizontal: center;
+    align: center middle;
+    width: 100%;
+    margin-top: 1;
+    height: auto;
+}
+
+.download-cancel-row Button {
+    min-width: 16;
+}
+
+.btn-danger {
+    background: #3d1219;
+    color: #ff7b72;
+    border: tall #f85149;
+    text-style: bold;
+}
+
+.btn-danger:hover {
+    background: #f85149;
+    color: #0d1117;
+}
+
+GradientProgressBar {
+    height: 1;
+    width: 100%;
+    margin: 1 0 0 0;
+}
+
+GradientSpinner {
+    height: 1;
+    width: 100%;
+    content-align: center middle;
+    margin: 1 0 0 0;
+}
+
+/* Theme accents for gradient containers */
+App.theme-cyberpunk-neon .download-dialog {
+    border: round #ff007f;
+}
+App.theme-cyberpunk-neon .btn-danger {
+    background: #3d0a24;
+    color: #ff7ab8;
+    border: tall #ff007f;
+}

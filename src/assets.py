@@ -19,7 +19,8 @@ import requests
 from src.config import config
 from src.environment import env
 from src.sources import SourceInfo, sources_mgr
-from src.utils import download_file, format_size, run_command
+from src.utils import DownloadResult, download_file, download_file_ex, format_size, run_command
+import threading
 
 
 USER_AGENT = "APKUpdater-3.0.3"
@@ -261,9 +262,14 @@ class AssetsManager:
         self,
         info: AssetReleaseInfo,
         progress_callback: Optional[Callable[[str, int, int, str], None]] = None,
-    ) -> bool:
-        """Download CLI and Patches binaries with progress tracking."""
-        # Clean older versions
+        cancel_event: Optional[threading.Event] = None,
+        file_start_callback: Optional[Callable[[str, int], None]] = None,
+    ) -> DownloadResult:
+        """Download CLI and Patches binaries with progress tracking.
+
+        progress_callback(label, current, total, pct)
+        file_start_callback(label, size) — fired when a new file begins downloading
+        """
         src_dir = self.assets_dir / info.source_name
         src_dir.mkdir(parents=True, exist_ok=True)
 
@@ -271,36 +277,64 @@ class AssetsManager:
         target_cli = self.assets_dir / f"CLI-{info.cli_version}.jar"
 
         # 1. Check or download CLI
+        cli_label = f"CLI-{info.cli_version}.jar"
         cli_ok = False
         if target_cli.exists() and (info.cli_size <= 0 or target_cli.stat().st_size == info.cli_size):
             cli_ok = True
         elif self.get_cached_cli(info.source_name, info.cli_version, target_cli):
             cli_ok = True
         else:
+            if cancel_event is not None and cancel_event.is_set():
+                return DownloadResult.CANCELLED
+            if file_start_callback:
+                file_start_callback(cli_label, info.cli_size)
+
             def cli_prog(cur, tot, pct):
                 if progress_callback:
-                    progress_callback(f"CLI-{info.cli_version}.jar", cur, tot, pct)
+                    progress_callback(cli_label, cur, tot, pct)
 
-            if download_file(info.cli_url, target_cli, info.cli_size, cli_prog):
+            result = download_file_ex(
+                info.cli_url, target_cli, info.cli_size, cli_prog, cancel_event=cancel_event
+            )
+            if result == DownloadResult.CANCELLED:
+                return DownloadResult.CANCELLED
+            if result == DownloadResult.OK:
                 self.save_cli_to_cache(info.source_name, info.cli_version, target_cli)
                 cli_ok = True
 
         if not cli_ok:
-            return False
+            return DownloadResult.ERROR
 
         # 2. Check or download Patches
+        patches_label = f"Patches-{info.patches_version}.{info.patches_ext}"
         patches_ok = False
-        if target_patches.exists() and (info.patches_size <= 0 or target_patches.stat().st_size == info.patches_size):
+        if target_patches.exists() and (
+            info.patches_size <= 0 or target_patches.stat().st_size == info.patches_size
+        ):
             patches_ok = True
         else:
+            if cancel_event is not None and cancel_event.is_set():
+                return DownloadResult.CANCELLED
+            if file_start_callback:
+                file_start_callback(patches_label, info.patches_size)
+
             def patch_prog(cur, tot, pct):
                 if progress_callback:
-                    progress_callback(f"Patches-{info.patches_version}.{info.patches_ext}", cur, tot, pct)
+                    progress_callback(patches_label, cur, tot, pct)
 
-            if download_file(info.patches_url, target_patches, info.patches_size, patch_prog):
+            result = download_file_ex(
+                info.patches_url,
+                target_patches,
+                info.patches_size,
+                patch_prog,
+                cancel_event=cancel_event,
+            )
+            if result == DownloadResult.CANCELLED:
+                return DownloadResult.CANCELLED
+            if result == DownloadResult.OK:
                 patches_ok = True
 
-        return patches_ok
+        return DownloadResult.OK if patches_ok else DownloadResult.ERROR
 
     # --- CLI Capability Detection ---
 
@@ -429,9 +463,13 @@ class AssetsManager:
         source_name: str,
         target_file: Path,
         progress_callback: Optional[Callable[[int, int], None]] = None,
+        cancel_event: Optional[threading.Event] = None,
     ) -> Optional[List[Dict[str, Any]]]:
         """Parse patches metadata by running CLI list-patches & list-versions."""
         if not cli_jar.exists() or not patches_file.exists() or not shutil.which("java"):
+            return None
+
+        if cancel_event is not None and cancel_event.is_set():
             return None
 
         # Build list-versions command
@@ -466,10 +504,15 @@ class AssetsManager:
                 "--bypass-verification",
             ]
 
-        code_v, out_v, _ = run_command(ver_cmd, timeout=30)
-        code_p, out_p, _ = run_command(patch_cmd, timeout=30)
+        # Longer timeout — list-patches can be slow on large bundles
+        code_v, out_v, _ = run_command(ver_cmd, timeout=120)
+        if cancel_event is not None and cancel_event.is_set():
+            return None
+        code_p, out_p, _ = run_command(patch_cmd, timeout=180)
 
         if code_p != 0:
+            return None
+        if cancel_event is not None and cancel_event.is_set():
             return None
 
         packages_map: Dict[Optional[str], Dict[str, Any]] = {}
@@ -498,6 +541,8 @@ class AssetsManager:
         total_blocks = len(blocks)
 
         for idx, block in enumerate(blocks):
+            if cancel_event is not None and cancel_event.is_set():
+                return None
             if progress_callback:
                 progress_callback(idx + 1, total_blocks)
 
@@ -557,8 +602,15 @@ class AssetsManager:
         source_name: str,
         release_info: AssetReleaseInfo,
         progress_callback: Optional[Callable[[str], None]] = None,
+        parse_progress_callback: Optional[Callable[[int, int], None]] = None,
+        cancel_event: Optional[threading.Event] = None,
+        phase_callback: Optional[Callable[[str], None]] = None,
     ) -> Optional[List[Dict[str, Any]]]:
-        """Ensure Patches-<version>.json is generated and loaded."""
+        """Ensure Patches-<version>.json is generated and loaded.
+
+        phase_callback: "api" | "cli" when switching parse source
+        parse_progress_callback(current, total) while walking CLI blocks
+        """
         src_dir = self.assets_dir / source_name
         json_target = src_dir / f"Patches-{release_info.patches_version}.json"
 
@@ -570,21 +622,46 @@ class AssetsManager:
             except Exception:
                 pass
 
+        if cancel_event is not None and cancel_event.is_set():
+            return None
+
         # Try parsing from API
         if release_info.json_url:
+            if phase_callback:
+                phase_callback("api")
             if progress_callback:
-                progress_callback("Parsing Patches JSON from API...")
+                progress_callback(
+                    f"Please Wait!!\nParsing JSON file for {source_name} patches from API."
+                )
             res = self.parse_patches_json_from_api(release_info.json_url, json_target)
             if res:
                 return res
 
-        # Fallback to CLI parsing
-        if progress_callback:
-            progress_callback("Parsing Patches from CLI (this may take a moment)...")
-        cli_jar = self.assets_dir / f"CLI-{release_info.cli_version}.jar"
-        patches_file = src_dir / f"Patches-{release_info.patches_version}.{release_info.patches_ext}"
+        if cancel_event is not None and cancel_event.is_set():
+            return None
 
-        return self.parse_patches_json_from_cli(cli_jar, patches_file, source_name, json_target)
+        # Fallback to CLI parsing
+        if phase_callback:
+            phase_callback("cli")
+        if progress_callback:
+            progress_callback(
+                f"Please Wait!!\n"
+                f"Parsing JSON file for {source_name} patches from CLI Output.\n"
+                f"This might take some time."
+            )
+        cli_jar = self.assets_dir / f"CLI-{release_info.cli_version}.jar"
+        patches_file = (
+            src_dir / f"Patches-{release_info.patches_version}.{release_info.patches_ext}"
+        )
+
+        return self.parse_patches_json_from_cli(
+            cli_jar,
+            patches_file,
+            source_name,
+            json_target,
+            progress_callback=parse_progress_callback,
+            cancel_event=cancel_event,
+        )
 
     # --- Delete Assets ---
 
