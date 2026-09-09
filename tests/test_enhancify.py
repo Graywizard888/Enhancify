@@ -23,7 +23,7 @@ class TestEnhancifyCore(unittest.TestCase):
         self.workspace = Path(self.temp_dir)
         # Create dummy sources.json
         (self.workspace / "sources.json").write_text('[{"source": "TestSrc", "repository": "test/repo"}]')
-        (self.workspace / ".info").write_text("VERSION='v6.2.4'")
+        (self.workspace / ".info").write_text("VERSION='v6.2.6'")
 
     def tearDown(self):
         shutil.rmtree(self.temp_dir, ignore_errors=True)
@@ -57,11 +57,11 @@ class TestEnhancifyCore(unittest.TestCase):
 
     def test_environment_detector(self):
         env_test = Environment(self.workspace)
-        self.assertEqual(env_test.get_version(), "v6.2.4")
+        self.assertEqual(env_test.get_version(), "v6.2.6")
         specs = env_test.get_device_specs()
         self.assertIsNotNone(specs.arch)
         self.assertIsNotNone(specs.dpi)
-        self.assertEqual(specs.enhancify_version, "v6.2.4")
+        self.assertEqual(specs.enhancify_version, "v6.2.6")
 
     def test_sources_manager(self):
         sm = SourcesManager(self.workspace)

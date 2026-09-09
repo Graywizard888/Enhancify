@@ -593,6 +593,7 @@ installDependencies() {
     grep -q '^zip$' <<< "$BINS" || PKGS+=("zip")
     grep -q '^python$' <<< "$BINS" || grep -q '^python3$' <<< "$BINS" || PKGS+=("python")
 
+
     if [ "${#PKGS[@]}" -ne 0 ]; then
         print_info "Installing packages: ${YELLOW}${PKGS[*]}${RESET}"
 
@@ -613,6 +614,7 @@ installDependencies() {
             pip install textual rich requests beautifulsoup4 --break-system-packages &>/dev/null || pip install textual rich requests beautifulsoup4 &>/dev/null
         fi
     fi
+
 
     sed -i '/allow-external-apps/s/# //' "$HOME/.termux/termux.properties" 2>/dev/null
 
@@ -780,6 +782,7 @@ else
         EXIT_CODE=$?
     fi
 fi
+
 
 if [ "$EXIT_CODE" -eq 0 ]; then
     print_success "Enhancify exited successfully"

@@ -16,7 +16,7 @@ main() {
     setEnv ENABLE_MULTIPATCHER "off" init .config
     source .config
 
-    mkdir -p "assets" "apps" "$STORAGE" "$STORAGE/Patched" "$STORAGE/GmsCore"
+    mkdir -p "assets" "apps" "$STORAGE" "$STORAGE/Patched" "$STORAGE/Dependencies"
 
     [ "$ROOT_ACCESS" == true ] && MENU_ENTRY=(9 "Unmount Patched app")
 
@@ -39,7 +39,7 @@ main() {
                 2 "📝 Change Source" \
                 3 "🚀 Bundle Patcher (Experimental)" \
                 4 "🔧 Configure" \
-                5 "🔌 Fetch Gmscore" \
+                5 "🔌 Fetch Dependency" \
                 6 "❌ Delete Assets" \
                 7 "❌ Delete Apps" \
                 8 "📋 Specs & Changelog" \
@@ -60,7 +60,7 @@ main() {
                 configure
                 ;;
             5)
-                Fetch_MicroG
+                Fetch_Dependency
                 ;;
             6)
                 deleteAssets

@@ -1,11 +1,36 @@
-showMicroGChangelog() {
-    local provider="$1"
-    local version="$2"
-    local size="$3"
-    local api_response="$4"
+#!/usr/bin/bash
 
-    local changelog_tmp="$HOME/Enhancify/microg_changelog.tmp"
-    local changelog_display="$HOME/Enhancify/microg_changelog_display.tmp"
+Fetch_Dependency() {
+    while true; do
+        local choice
+        choice=$("${DIALOG[@]}" \
+            --title '| Fetch Dependency |' \
+            --cancel-label Back \
+            --ok-label Select \
+            --menu 'Select a dependency to fetch:' -1 -1 -1 \
+            1 "Fetch GmsCore" \
+            2 "Fetch PotHelper" \
+            3>&1 1>&2 2>&3
+        ) || return 1
+        case "$choice" in
+            1)
+                Fetch_MicroG || continue
+                ;;
+            2)
+                Fetch_PotHelper || continue
+                ;;
+            *) return 1 ;;
+        esac
+    done
+}
+
+showPotHelperChangelog() {
+    local version="$1"
+    local size="$2"
+    local api_response="$3"
+
+    local changelog_tmp="$HOME/Enhancify/pothelper_changelog.tmp"
+    local changelog_display="$HOME/Enhancify/pothelper_changelog_display.tmp"
 
     jq -r 'if type == "array" then .[0] else . end | .body // empty' <<< "$api_response" > "$changelog_tmp" 2>/dev/null
 
@@ -34,12 +59,12 @@ showMicroGChangelog() {
     fi
 
     {
-        echo " Provider : $provider"
+        echo " Provider : PotHelper"
         echo " Version  : $version"
         if [ -n "$size_display" ]; then
             echo " Size     : $size_display"
         fi
-        echo " Type     : GmsCore (MicroG)"
+        echo " Type     : PotHelper APK"
         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
         echo ""
     } > "$changelog_display"
@@ -148,7 +173,7 @@ showMicroGChangelog() {
     ' >> "$changelog_display"
 
     "${DIALOG[@]}" \
-        --title "| $provider GmsCore — Changelog |" \
+        --title "| PotHelper — Changelog |" \
         --exit-label "Download" \
         --textbox "$changelog_display" -1 -1
 
@@ -158,9 +183,8 @@ showMicroGChangelog() {
     return $dialog_exit
 }
 
-Fetch_MicroG() {
-    STORAGE_PATH="$STORAGE"
-    local microg_dir="$STORAGE/Dependencies"
+Fetch_PotHelper() {
+    local pot_dir="$STORAGE/Dependencies"
     local GITHUB_TOKEN
     GITHUB_TOKEN=$(read_github_token)
     local AUTH_HEADER=""
@@ -185,29 +209,10 @@ Fetch_MicroG() {
 
     curl_opts+=(-D headers.tmp)
 
-    local choice provider repo
-    choice=$("${DIALOG[@]}" \
-        --title '| Choose GmsCore Provider |' \
-        --cancel-label Back \
-        --ok-label Download \
-        --menu 'Select GmsCore provider:' -1 -1 -1 \
-        1 "Wst_Xda (Recommended)" \
-        2 "Revanced " \
-        3 "Rex " \
-        3>&1 1>&2 2>&3
-    ) || return 1
-
-    case "$choice" in
-        1) provider="Wst_Xda" repo="MorpheApp/MicroG-RE" ;;
-        2) provider="Revanced" repo="ReVanced/GmsCore" ;;
-        3) provider="Rex" repo="YT-Advanced/GmsCore" ;;
-        *) return 1 ;;
-    esac
-
     if [ "$DISABLE_NETWORK_ACCELERATION" != "on" ]; then
-        notify info "Initiating Network Acceleration ...\nFetching GmsCore Info... $AUTH_TEXT"
+        notify info "Initiating Network Acceleration ...\nFetching PotHelper Info... $AUTH_TEXT"
     else
-        notify info "Fetching GmsCore Info.. $AUTH_TEXT"
+        notify info "Fetching PotHelper Info.. $AUTH_TEXT"
     fi
     sleep 1
 
@@ -219,10 +224,11 @@ Fetch_MicroG() {
     rm -f headers.tmp response.tmp
 
     if [ "$remaining" -lt 2 ]; then
-        notify msg "Unable to fetch GmsCore\nYou are probably rate limited!!\n\nTry again later."
+        notify msg "Unable to fetch PotHelper\nYou are probably rate limited!!\n\nTry again later."
         return 1
     fi
 
+    local repo="MorpheApp/PotHelper"
     local api_url="https://api.github.com/repos/$repo/releases"
 
     "${curl_opts[@]}" "$api_url" > response.tmp
@@ -232,7 +238,7 @@ Fetch_MicroG() {
     local api_response
     if ! api_response=$(<response.tmp); then
         rm -f headers.tmp response.tmp
-        notify msg "Failed to fetch release info for $provider GmsCore"
+        notify msg "Failed to fetch release info for PotHelper"
         return 1
     fi
     rm -f headers.tmp response.tmp
@@ -241,7 +247,7 @@ Fetch_MicroG() {
     tag_name=$(jq -r 'if type == "array" then .[0] else . end | .tag_name // empty' <<< "$api_response")
 
     [ -z "$tag_name" ] && {
-        notify msg "Failed to parse release info for $provider GmsCore\nRetry later."
+        notify msg "Failed to parse release info for PotHelper\nRetry later."
         return 1
     }
 
@@ -255,7 +261,7 @@ Fetch_MicroG() {
     ' <<< "$api_response" | head -n1)
 
     [ -z "$asset_info" ] && {
-        notify msg "No APK assets found in $provider release"
+        notify msg "No APK assets found in PotHelper release"
         return 1
     }
 
@@ -263,37 +269,37 @@ Fetch_MicroG() {
     IFS=$'\t' read -r url size name <<< "$asset_info"
 
     if [ -z "$size" ] || [ "$size" -le 0 ] 2>/dev/null; then
-        notify msg "Invalid file size from API for $provider GmsCore"
+        notify msg "Invalid file size from API for PotHelper"
         return 1
     fi
 
     local clean_tag
     clean_tag=$(echo "$tag_name" | tr -cd '[:alnum:]._-')
-    local filename="${provider}-${clean_tag}.apk"
-    local output_file="$microg_dir/$filename"
+    local filename="$name"
+    local output_file="$pot_dir/$filename"
 
     if [ -f "$output_file" ]; then
         local existing_size
         existing_size=$(stat -c %s "$output_file" 2>/dev/null)
         if [ "$existing_size" == "$size" ]; then
-            notify msg "$provider GmsCore $clean_tag already downloaded!\nSize: $(numfmt --to=iec --format='%0.1f' "$size")\n\nOpening..."
+            notify msg "PotHelper $clean_tag already downloaded!\nSize: $(numfmt --to=iec --format='%0.1f' "$size")\n\nOpening..."
             termux-open --view "$output_file"
             tput civis
             return 0
         fi
     fi
 
-    showMicroGChangelog "$provider" "$clean_tag" "$size" "$api_response"
+    showPotHelperChangelog "$clean_tag" "$size" "$api_response"
 
-    mkdir -p "$microg_dir"
+    mkdir -p "$pot_dir"
 
-    rm -f "$microg_dir/${provider}-"*.apk 2>/dev/null
+    rm -f "$pot_dir/pot-helper-"*.apk 2>/dev/null
 
     local -a dl_urls=("$url")
-    local -a dl_dirs=("$microg_dir")
+    local -a dl_dirs=("$pot_dir")
     local -a dl_files=("$filename")
     local -a dl_sizes=("$size")
-    local -a dl_labels=("$provider GmsCore $clean_tag")
+    local -a dl_labels=("PotHelper $clean_tag")
 
     if [ "$DISABLE_NETWORK_ACCELERATION" != "on" ]; then
         downloadBatchAria2c dl_urls dl_dirs dl_files dl_sizes dl_labels || return 1
@@ -305,7 +311,7 @@ Fetch_MicroG() {
     actual_size=$(stat -c %s "$output_file" 2>/dev/null)
 
     if [ -z "$actual_size" ]; then
-        notify msg "Download failed!\n$provider GmsCore file not found after download."
+        notify msg "Download failed!\nPotHelper file not found after download."
         return 1
     fi
 
@@ -315,7 +321,7 @@ Fetch_MicroG() {
         return 1
     fi
 
-    notify msg "$provider GmsCore downloaded successfully!\nVersion: $clean_tag\nSize: $(numfmt --to=iec --format='%0.1f' "$actual_size")\nSaved at: Internal Storage/Enhancify/Dependencies/$filename"
+    notify msg "PotHelper downloaded successfully!\nVersion: $clean_tag\nSize: $(numfmt --to=iec --format='%0.1f' "$actual_size")\nSaved at: Internal Storage/Enhancify/Dependencies/$filename"
     termux-open --view "$output_file"
     tput civis
     return 0
