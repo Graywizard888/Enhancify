@@ -457,6 +457,7 @@ update_sources_json() {
         "Paresh-Patches:main:dev"
         "brossh:main:dev"
         "Doom-Patches:main:dev"
+        "jasonwu1994:main:dev"
     )
 
     for config in "${sources_config[@]}"; do
