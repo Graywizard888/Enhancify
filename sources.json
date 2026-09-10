@@ -102,5 +102,13 @@
       "json": "https://raw.githubusercontent.com/rushiranpise/morphe-patches/refs/heads/main/patches-list.json",
       "version": null
     }
+  },
+  {
+    "source": "jasonwu1994",
+    "repository": "jasonwu1994/Gboard-patches",
+    "api": {
+      "json": "https://raw.githubusercontent.com/jasonwu1994/Gboard-patches/refs/heads/main/patches-list.json",
+      "version": null
+    }
   }
 ]
