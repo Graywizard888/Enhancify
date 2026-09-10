@@ -1,1 +1,0 @@
-"""Enhancify TUI package"""
