@@ -18,6 +18,7 @@ from src.features import bundle_mgr
 from src.tui.screens.file_picker import FilePickerScreen
 from src.tui.widgets.dialogs import InputDialog, MessageDialog
 from src.tui.widgets.header import CyberHeader
+from src.tui.widgets.button_bar import ButtonBar
 
 
 class BundlePatcherScreen(Screen):
@@ -41,7 +42,7 @@ class BundlePatcherScreen(Screen):
                 yield Label("📦 Bundle Patcher (Experimental)", classes="card-title")
                 yield Label("Import standalone patch bundles from external URLs or JSON files:", classes="card-desc")
 
-                with Horizontal():
+                with ButtonBar():
                     yield Button("🌐 Import from URL [U]", id="btn-url", classes="btn-primary")
                     yield Button("📂 Import JSON File [F]", id="btn-file")
                     yield Button("🔙 Back [B]", id="btn-back", classes="btn-secondary")

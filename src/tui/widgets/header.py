@@ -8,6 +8,7 @@ from textual.app import ComposeResult
 from textual.containers import Container, Horizontal, Vertical
 from textual.widget import Widget
 from textual.widgets import Label, Static
+from src.tui.widgets.button_bar import ButtonBar
 
 from src.config import config
 from src.environment import env
@@ -41,7 +42,7 @@ class CyberHeader(Widget):
             arch = env.get_arch()
             java_ver, _ = env.detect_java_version()
 
-            with Horizontal(id="status-bar-badges"):
+            with ButtonBar(id="status-bar-badges"):
                 # Privilege badge
                 mode_color = "#00ff7f" if "Root" in self.mode_label else "#00e5ff" if "Rish" in self.mode_label else "#d2a8ff"
                 yield Label(f"⚙️ {self.mode_label}", classes="badge badge-green")

@@ -49,26 +49,37 @@ _fetchAdditionalSourceInfo() {
 
     local PATCHES_API_URL
     if [ "$USE_PRE_RELEASE" = "on" ]; then
-        PATCHES_API_URL="https://api.github.com/repos/$REPO/releases"
+        PATCHES_API_URL="https://api.github.com/repos/$REPO/releases?per_page=30"
     else
         PATCHES_API_URL="https://api.github.com/repos/$REPO/releases/latest"
     fi
 
     "${CURL_CMD[@]}" "$PATCHES_API_URL" > response_extra.tmp 2>/dev/null
 
-    if ! jq -e 'if type == "array" then .[0] else . end | .tag_name' response_extra.tmp &>/dev/null; then
+    if ! jq -e --arg filter_mode "$USE_PRE_RELEASE" '
+        if $filter_mode == "on"
+        then (if type == "array" then ((([.[] | select(.prerelease == true and .draft != true)][0])) // .[0]) else . end)
+        else (if type == "array" then .[0] else . end)
+        end | .tag_name' response_extra.tmp &>/dev/null; then
         rm -f response_extra.tmp
         return 1
     fi
 
-    jq -r 'if type == "array" then .[0] else . end | .body // empty' \
+    jq -r --arg filter_mode "$USE_PRE_RELEASE" '
+        if $filter_mode == "on"
+        then (if type == "array" then ((([.[] | select(.prerelease == true and .draft != true)][0])) // .[0]) else . end)
+        else (if type == "array" then .[0] else . end)
+        end | .body // empty' \
         response_extra.tmp > "$HOME/Enhancify/changelog_${add_source}.tmp" 2>/dev/null
 
     local PATCHES_EXT
     PATCHES_EXT=$(get_patches_extension_from_api "response_extra.tmp")
 
-    if ! jq -r --arg ext "$PATCHES_EXT" '
-        if type == "array" then .[0] else . end |
+    if ! jq -r --arg ext "$PATCHES_EXT" --arg filter_mode "$USE_PRE_RELEASE" '
+        (if $filter_mode == "on"
+         then (if type == "array" then ((([.[] | select(.prerelease == true and .draft != true)][0])) // .[0]) else . end)
+         else (if type == "array" then .[0] else . end)
+         end) |
         "PATCHES_VERSION='\''\(.tag_name)'\''",
         "PATCHES_EXT='\''" + $ext + "'\''",
         (

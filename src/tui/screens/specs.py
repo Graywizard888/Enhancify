@@ -17,6 +17,7 @@ from src.config import config
 from src.environment import env
 from src.tui.widgets.dialogs import ProgressModal
 from src.tui.widgets.header import CyberHeader
+from src.tui.widgets.button_bar import ButtonBar
 
 
 class SpecsScreen(Screen):
@@ -56,7 +57,7 @@ class SpecsScreen(Screen):
                 ]
                 yield Label("\n".join(specs_lines), classes="card-desc")
 
-                with Horizontal():
+                with ButtonBar():
                     yield Button("🔙 Back to Main Menu [B]", id="btn-back", classes="btn-primary")
 
             with Vertical(classes="card"):

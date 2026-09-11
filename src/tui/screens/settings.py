@@ -18,6 +18,7 @@ from src.environment import env
 from src.theme import get_current_theme
 from src.tui.widgets.dialogs import InputDialog, MessageDialog, ProgressModal
 from src.tui.widgets.header import CyberHeader
+from src.tui.widgets.button_bar import ButtonBar
 
 
 TOGGLE_KEYS = [
@@ -63,7 +64,7 @@ class SettingsScreen(Screen):
                 yield Label("🎨 Appearance & Themes", classes="card-title")
                 yield Label(f"Active Theme: [bold {cur_theme.primary_color}]{cur_theme.name}[/] — {cur_theme.description}", classes="card-desc")
 
-                with Horizontal():
+                with ButtonBar():
                     yield Button("🎨 Switch Theme [T]", id="btn-theme-select", classes="btn-primary")
 
             # Sub-manager shortcuts
@@ -71,12 +72,12 @@ class SettingsScreen(Screen):
                 yield Label("🔧 Configuration Modules", classes="card-title")
                 yield Label("Access advanced managers and tools below:", classes="card-desc")
 
-                with Horizontal():
+                with ButtonBar():
                     yield Button("➕ Custom Sources", id="btn-custom-src")
                     yield Button("🔑 Keystore Manager", id="btn-keystore")
                     yield Button("🎫 GitHub Token", id="btn-token")
 
-                with Horizontal():
+                with ButtonBar():
                     yield Button("🌐 APKMirror Scraper Config", id="btn-apkmirror-cfg")
                     yield Button("📦 Backup Stock Apps", id="btn-backup-apps")
                     yield Button("🔄 Auto Upgrade", id="btn-auto-upgrade")
@@ -146,10 +147,26 @@ class SettingsScreen(Screen):
             key = event.item.toggle_key
             new_state = config.toggle(key)
             self.populate_toggles()
-            if key == "USE_PRE_RELEASE" and new_state:
-                self.app.push_screen(
-                    MessageDialog("Warning", "Pre-release patches enabled!\nThese patches are under active development and may be unstable.")
-                )
+            if key == "USE_PRE_RELEASE":
+                if new_state:
+                    self.app.push_screen(
+                        MessageDialog(
+                            "Pre-release Enabled",
+                            "Pre-release patches enabled!\n"
+                            "These patches are under active development and may be unstable.\n\n"
+                            "Next: open Source Selection and press Refresh Tags [R]\n"
+                            "to fetch prerelease tags, then re-download assets.",
+                        )
+                    )
+                else:
+                    self.app.push_screen(
+                        MessageDialog(
+                            "Stable Channel",
+                            "Switched back to stable releases.\n\n"
+                            "Next: open Source Selection and press Refresh Tags [R]\n"
+                            "to show stable tags again.",
+                        )
+                    )
             elif key == "ENABLE_MULTIPATCHER" and new_state:
                 self.app.push_screen(
                     MessageDialog("Warning", "Multi-Patcher is experimental!\nCombining patches from multiple sources may cause runtime conflicts.")

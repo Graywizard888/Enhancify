@@ -19,6 +19,7 @@ from src.environment import env
 from src.patches import patches_mgr
 from src.tui.widgets.dialogs import MessageDialog
 from src.tui.widgets.header import CyberHeader
+from src.tui.widgets.button_bar import ButtonBar
 
 
 class PatchSelectScreen(Screen):
@@ -57,7 +58,7 @@ class PatchSelectScreen(Screen):
 
                 yield Input(placeholder="🔍 Search patches by name or keyword...", id="search-patches")
 
-                with Horizontal():
+                with ButtonBar():
                     yield Button("⚡ Recommended [R]", id="btn-rec", classes="btn-primary")
                     yield Button("✅ Select All [A]", id="btn-all")
                     yield Button("❌ Deselect All [D]", id="btn-none")

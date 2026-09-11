@@ -23,6 +23,7 @@ from src.installer import app_installer
 from src.patcher import PatchExecutionConfig, patcher_engine
 from src.tui.widgets.dialogs import MessageDialog, ProgressModal
 from src.tui.widgets.header import CyberHeader
+from src.tui.widgets.button_bar import ButtonBar
 
 
 class PatchProgressScreen(Screen):
@@ -57,7 +58,7 @@ class PatchProgressScreen(Screen):
                 yield Label("Status: [bold #ffd700]Initializing JVM & CLI Patcher...[/]", id="status-label", classes="card-desc")
                 yield ProgressBar(total=100, show_eta=False, id="progress-bar")
 
-                with Horizontal(id="action-buttons"):
+                with ButtonBar(id="action-buttons"):
                     yield Button("⚡ Install & Finalize [I]", id="btn-install", classes="btn-primary", disabled=True)
                     yield Button("📤 Share Logs [S]", id="btn-share")
                     yield Button("🏠 Main Menu [M]", id="btn-menu", classes="btn-secondary")

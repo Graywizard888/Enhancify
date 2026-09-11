@@ -20,6 +20,7 @@ from src.config import config
 from src.environment import env
 from src.tui.widgets.dialogs import DownloadProgressModal, MessageDialog, ProgressModal
 from src.tui.widgets.header import CyberHeader
+from src.tui.widgets.button_bar import ButtonBar
 
 
 class VersionSelectScreen(Screen):
@@ -50,7 +51,7 @@ class VersionSelectScreen(Screen):
                 yield Label(f"📦 Select Version for [bold #00ff7f]{app_name}[/]", classes="card-title")
                 yield Label("Select a version from APKMirror. [RECOMMENDED] versions are tested by patch developers:", classes="card-desc")
 
-                with Horizontal():
+                with ButtonBar():
                     yield Button("⚡ Auto Recommended [A]", id="btn-auto", classes="btn-primary")
                     yield Button("🔄 Refresh List [R]", id="btn-refresh")
                     yield Button("🔙 Back [B]", id="btn-back", classes="btn-secondary")

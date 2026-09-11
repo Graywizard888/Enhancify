@@ -4,7 +4,7 @@ Main TUI application class tying all screens, themes, and global events together
 """
 
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from textual.app import App, ComposeResult
 
@@ -69,6 +69,7 @@ class EnhancifyApp(App):
         self.force_root = force_root
         self.force_rish = force_rish
         self.selected_app: Dict[str, Any] = {}
+        self.multi_sources: List[str] = [config.get("SOURCE", "Anddea")]
 
     def on_mount(self) -> None:
         """Apply active theme and start on main menu."""

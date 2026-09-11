@@ -15,6 +15,7 @@ from textual.widgets import Button, Footer, Label, ListItem, ListView
 from src.environment import env
 from src.tui.widgets.dialogs import ConfirmDialog, MessageDialog
 from src.tui.widgets.header import CyberHeader
+from src.tui.widgets.button_bar import ButtonBar
 from src.utils import run_command
 
 
@@ -37,7 +38,7 @@ class UnmountScreen(Screen):
                 yield Label("🔒 Unmount Root Patched Application", classes="card-title")
                 yield Label("Select an active mounted application to unmount and remove boot scripts:", classes="card-desc")
 
-                with Horizontal():
+                with ButtonBar():
                     yield Button("🔙 Back [B]", id="btn-back", classes="btn-secondary")
 
                 yield ListView(id="mounted-list")

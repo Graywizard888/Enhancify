@@ -133,6 +133,76 @@ class AssetsManager:
 
     # --- Fetch Release Info ---
 
+    @staticmethod
+    def _select_github_release(
+        data: Any, want_prerelease: bool
+    ) -> Optional[Dict[str, Any]]:
+        """Pick the correct release object from a GitHub API payload.
+
+        * Stable mode: ``/releases/latest`` returns a dict — use it directly.
+          If a list is given, prefer the first NON-prerelease entry.
+        * Pre-release mode: list expected — return the first entry flagged
+          ``prerelease == true`` (skipping drafts). Fall back to the first
+          entry only when the repo publishes no prereleases at all.
+        """
+        if isinstance(data, dict):
+            # Single release object (e.g. /releases/latest or /releases/tags/x)
+            if want_prerelease and not data.get("prerelease"):
+                # Wrong channel but still usable as last-resort fallback.
+                pass
+            return data
+        if not isinstance(data, list) or not data:
+            return None
+        if want_prerelease:
+            for rel in data:
+                if isinstance(rel, dict) and rel.get("prerelease") is True and rel.get("draft") is not True:
+                    return rel
+            # No prerelease published — fall back to newest release so the
+            # flow still works instead of hard-failing.
+            return data[0] if isinstance(data[0], dict) else None
+        # Stable: first non-prerelease, else first entry.
+        for rel in data:
+            if isinstance(rel, dict) and not rel.get("prerelease") and rel.get("draft") is not True:
+                return rel
+        return data[0] if isinstance(data[0], dict) else None
+
+    def fetch_revanced_custom_api_release(
+        self, use_prerelease: bool
+    ) -> Optional[Dict[str, Any]]:
+        """Fetch ReVanced patches metadata from the official custom API.
+
+        Bash parity with fetch_revanced_custom_api(): returns dict with
+        version/download_url/description, or None on failure.
+        """
+        url = (
+            "https://api.revanced.app/v5/patches/prerelease"
+            if use_prerelease
+            else "https://api.revanced.app/v5/patches"
+        )
+        try:
+            headers: Dict[str, str] = {
+                "Accept": "application/json",
+                "User-Agent": USER_AGENT_GITHUB,
+            }
+            tok = config.get_github_token()
+            if tok:
+                headers["Authorization"] = f"Bearer {tok}"
+            r = requests.get(url, headers=headers, timeout=8)
+            if r.status_code == 200:
+                data = r.json()
+                version = (data.get("version") or "").strip()
+                download_url = (data.get("download_url") or "").strip()
+                if version and download_url:
+                    version = version[1:] if version.startswith("v") else version
+                    return {
+                        "version": version,
+                        "download_url": download_url,
+                        "description": data.get("description", "") or "",
+                    }
+        except Exception:
+            pass
+        return None
+
     def fetch_source_release_info(self, source_name: str) -> Optional[AssetReleaseInfo]:
         """Fetch patch and CLI release metadata from GitHub or custom API."""
         src_info = sources_mgr.get_source(source_name)
@@ -141,14 +211,13 @@ class AssetsManager:
 
         headers = self._get_github_headers()
         use_prerelease = config.is_on("USE_PRE_RELEASE")
+        # Effective JSON URL honours USE_PRE_RELEASE (main <-> dev branch swap).
+        effective_json_url = sources_mgr.get_effective_json_url(
+            source_name, src_info.json_url or ""
+        )
 
         # 1. Fetch Patches info
         repo = src_info.repository
-        patches_api_url = (
-            f"https://api.github.com/repos/{repo}/releases"
-            if use_prerelease
-            else f"https://api.github.com/repos/{repo}/releases/latest"
-        )
 
         changelog = ""
         patches_ver = ""
@@ -157,50 +226,84 @@ class AssetsManager:
         patches_ext = self.get_patches_extension(source_name)
         extra_assets = {}
 
-        try:
-            r = requests.get(patches_api_url, headers=headers, timeout=8)
-            if r.status_code == 200:
-                data = r.json()
-                release_obj = data[0] if isinstance(data, list) else data
-                patches_ver = release_obj.get("tag_name", "")
-                changelog = release_obj.get("body", "")
+        patches_resolved_via_custom_api = False
 
-                for asset in release_obj.get("assets", []):
-                    name = asset.get("name", "")
-                    dl_url = asset.get("browser_download_url", "")
-                    sz = int(asset.get("size", 0))
+        # ReVanced: prefer the official custom API (GitHub repo may 404 and
+        # the custom API is the source of truth for stable/prerelease).
+        if source_name == "ReVanced":
+            custom = self.fetch_revanced_custom_api_release(use_prerelease)
+            if custom:
+                patches_ver = custom["version"]
+                patches_url = custom["download_url"]
+                changelog = custom["description"]
+                patches_size = 0  # custom API gives no size; verified post-download
+                patches_ext = "mpp" if patches_url.endswith(".mpp") else "rvp"
+                patches_resolved_via_custom_api = True
 
-                    if name.endswith(".asc") or name.endswith(".json") or any(x in name.lower() for x in ["sha256", "sha1", "md5", "checksum"]):
-                        continue
+        if not patches_resolved_via_custom_api:
+            if use_prerelease:
+                patches_api_url = f"https://api.github.com/repos/{repo}/releases?per_page=30"
+            else:
+                patches_api_url = f"https://api.github.com/repos/{repo}/releases/latest"
 
-                    # Detect actual extension if different
-                    for ext_candidate in ["mpp", "rvp", "jar"]:
-                        if name.endswith(f".{ext_candidate}"):
-                            patches_ext = ext_candidate
-                            patches_url = dl_url
-                            patches_size = sz
-                            break
-                    else:
-                        extra_assets[name] = (dl_url, sz)
-            elif r.status_code == 404 and src_info.gitlab_id:
-                # GitLab release
-                gl_url = f"https://gitlab.com/api/v4/projects/{src_info.gitlab_id}/releases"
-                gl_r = requests.get(gl_url, headers={"Accept": "application/json"}, timeout=8)
-                if gl_r.status_code == 200:
-                    gl_data = gl_r.json()
-                    if gl_data and isinstance(gl_data, list):
-                        patches_ver = gl_data[0].get("tag_name", "")
-                        changelog = gl_data[0].get("description", "")
-        except Exception:
-            pass
+            try:
+                r = requests.get(patches_api_url, headers=headers, timeout=8)
+                if r.status_code == 200:
+                    data = r.json()
+                    release_obj = self._select_github_release(data, use_prerelease)
+                    if release_obj:
+                        patches_ver = release_obj.get("tag_name", "") or ""
+                        changelog = release_obj.get("body", "") or ""
 
-        # 2. Fetch CLI info
+                        for asset in release_obj.get("assets", []):
+                            name = asset.get("name", "")
+                            dl_url = asset.get("browser_download_url", "")
+                            sz = int(asset.get("size", 0))
+
+                            if name.endswith(".asc") or name.endswith(".json") or any(x in name.lower() for x in ["sha256", "sha1", "md5", "checksum"]):
+                                continue
+
+                            # Detect actual extension if different
+                            for ext_candidate in ["mpp", "rvp", "jar"]:
+                                if name.endswith(f".{ext_candidate}"):
+                                    patches_ext = ext_candidate
+                                    patches_url = dl_url
+                                    patches_size = sz
+                                    break
+                            else:
+                                extra_assets[name] = (dl_url, sz)
+                elif r.status_code == 404:
+                    # GitLab fallback (explicit id or repo path as project id)
+                    gl_id = src_info.gitlab_id or repo.replace("/", "%2F")
+                    gl_url = f"https://gitlab.com/api/v4/projects/{gl_id}/releases"
+                    try:
+                        gl_r = requests.get(gl_url, headers={"Accept": "application/json"}, timeout=8)
+                        if gl_r.status_code == 200:
+                            gl_data = gl_r.json()
+                            if gl_data and isinstance(gl_data, list):
+                                patches_ver = gl_data[0].get("tag_name", "") or ""
+                                changelog = gl_data[0].get("description", "") or ""
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
+            # Last resort for ReVanced: custom API fallback (bash parity).
+            if not patches_ver and source_name == "ReVanced":
+                custom = self.fetch_revanced_custom_api_release(use_prerelease)
+                if custom:
+                    patches_ver = custom["version"]
+                    patches_url = custom["download_url"]
+                    changelog = custom["description"]
+                    patches_size = 0
+                    patches_ext = "mpp" if patches_url.endswith(".mpp") else "rvp"
+
+        # 2. Fetch CLI info (channel-aware: filter prereleases when enabled)
         cli_repo = self.resolve_cli_repo(patches_ext, source_name)
-        cli_api_url = (
-            f"https://api.github.com/repos/{cli_repo}/releases"
-            if use_prerelease
-            else f"https://api.github.com/repos/{cli_repo}/releases/latest"
-        )
+        if use_prerelease:
+            cli_api_url = f"https://api.github.com/repos/{cli_repo}/releases?per_page=30"
+        else:
+            cli_api_url = f"https://api.github.com/repos/{cli_repo}/releases/latest"
 
         cli_ver = ""
         cli_url = ""
@@ -210,14 +313,15 @@ class AssetsManager:
             r_cli = requests.get(cli_api_url, headers=headers, timeout=8)
             if r_cli.status_code == 200:
                 data_cli = r_cli.json()
-                cli_obj = data_cli[0] if isinstance(data_cli, list) else data_cli
-                cli_ver = cli_obj.get("tag_name", "")
-                for asset in cli_obj.get("assets", []):
-                    name = asset.get("name", "")
-                    if name.endswith(".jar") and not name.endswith(".asc") and not name.endswith("-sources.jar"):
-                        cli_url = asset.get("browser_download_url", "")
-                        cli_size = int(asset.get("size", 0))
-                        break
+                cli_obj = self._select_github_release(data_cli, use_prerelease)
+                if cli_obj:
+                    cli_ver = cli_obj.get("tag_name", "") or ""
+                    for asset in cli_obj.get("assets", []):
+                        name = asset.get("name", "")
+                        if name.endswith(".jar") and not name.endswith(".asc") and not name.endswith("-sources.jar"):
+                            cli_url = asset.get("browser_download_url", "")
+                            cli_size = int(asset.get("size", 0))
+                            break
         except Exception:
             pass
 
@@ -233,8 +337,8 @@ class AssetsManager:
             f"PATCHES_URL='{patches_url}'",
             f"PATCHES_SIZE='{patches_size}'",
         ]
-        if src_info.json_url:
-            data_lines.append(f"JSON_URL='{src_info.json_url}'")
+        if effective_json_url:
+            data_lines.append(f"JSON_URL='{effective_json_url}'")
         (src_dir / ".data").write_text("\n".join(data_lines) + "\n", encoding="utf-8")
 
         cli_data_lines = [
@@ -253,7 +357,7 @@ class AssetsManager:
             cli_version=cli_ver,
             cli_url=cli_url,
             cli_size=cli_size,
-            json_url=src_info.json_url,
+            json_url=effective_json_url,
             changelog=changelog,
             extra_assets=extra_assets,
         )

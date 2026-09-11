@@ -41,6 +41,58 @@ Screen {
     margin-bottom: 0;
 }
 
+/* Stacked override MUST beat the #id selector above (same specificity+class). */
+#status-bar-badges.stacked {
+    layout: vertical;
+    align-horizontal: center;
+}
+
+#status-bar-badges.stacked .badge {
+    margin: 0 0 1 0;
+    width: auto;
+}
+
+/* === RESPONSIVE BUTTON BAR (never overflow beyond display) === */
+ButtonBar {
+    layout: horizontal;
+    height: auto;
+    width: 1fr;
+    margin-bottom: 1;
+}
+
+ButtonBar.stacked {
+    layout: vertical;
+}
+
+ButtonBar.stacked Button {
+    width: 1fr;
+    min-width: 0;
+    margin-right: 0;
+}
+
+ButtonBar Button {
+    width: auto;
+    min-width: 0;
+    max-width: 100%;
+}
+
+/* Dialog button rows use ButtonBar too — stack vertically when narrow. */
+.dialog-buttons.stacked {
+    layout: vertical;
+    align-horizontal: center;
+}
+
+.dialog-buttons.stacked Button {
+    width: 1fr;
+    min-width: 0;
+    margin-right: 0;
+}
+
+.download-cancel-row.stacked {
+    layout: vertical;
+    align-horizontal: center;
+}
+
 .badge {
     padding: 0 1;
     margin: 0 1;
@@ -132,8 +184,18 @@ Button {
     border: round #30363d;
     height: 3;
     min-width: 16;
+    max-width: 100%;
     margin: 0 1 1 0;
     text-style: bold;
+}
+
+/* Buttons stacked in a plain Vertical column always fill the row width
+   so long labels can never push beyond the display (truncated instead). */
+Vertical > Button {
+    width: 1fr;
+    min-width: 0;
+    max-width: 100%;
+    margin-right: 0;
 }
 
 Button:hover {

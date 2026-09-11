@@ -15,6 +15,7 @@ from textual.binding import Binding
 from textual.containers import Horizontal, Vertical
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, LoadingIndicator, Static
+from src.tui.widgets.button_bar import ButtonBar
 
 from src.tui.widgets.gradient import GradientProgressBar, GradientSpinner
 from src.utils import format_size
@@ -66,7 +67,7 @@ class MessageDialog(ModalScreen[None]):
         with Vertical(classes="dialog-box"):
             yield Label(self.dialog_title, classes="dialog-title")
             yield Label(self.message, classes="dialog-message")
-            with Horizontal(classes="dialog-buttons"):
+            with ButtonBar(classes="dialog-buttons"):
                 yield Button("OK", id="btn-ok", classes="btn-primary")
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
@@ -95,7 +96,7 @@ class ConfirmDialog(ModalScreen[bool]):
         with Vertical(classes="dialog-box"):
             yield Label(self.dialog_title, classes="dialog-title")
             yield Label(self.message, classes="dialog-message")
-            with Horizontal(classes="dialog-buttons"):
+            with ButtonBar(classes="dialog-buttons"):
                 yield Button(self.yes_label, id="btn-yes", classes="btn-primary")
                 yield Button(self.no_label, id="btn-no", classes="btn-secondary")
 
@@ -135,7 +136,7 @@ class InputDialog(ModalScreen[Optional[str]]):
                 password=self.password,
                 id="dialog-input",
             )
-            with Horizontal(classes="dialog-buttons"):
+            with ButtonBar(classes="dialog-buttons"):
                 yield Button("Submit", id="btn-submit", classes="btn-primary")
                 yield Button("Cancel", id="btn-cancel", classes="btn-secondary")
 
@@ -297,7 +298,7 @@ class DownloadProgressModal(ModalScreen[Optional[str]]):
             yield GradientProgressBar(id="dl-bar")
             yield Label("", id="dl-detail", classes="download-detail")
             if self.allow_cancel:
-                with Horizontal(classes="dialog-buttons download-cancel-row"):
+                with ButtonBar(classes="dialog-buttons download-cancel-row"):
                     yield Button("Cancel", id="btn-cancel", classes="btn-danger")
 
     def on_mount(self) -> None:
@@ -478,7 +479,7 @@ class ParseProgressModal(ModalScreen[Optional[str]]):
             yield GradientProgressBar(id="parse-bar")
             yield Label("", id="parse-detail", classes="download-detail")
             if self.allow_cancel:
-                with Horizontal(classes="dialog-buttons download-cancel-row"):
+                with ButtonBar(classes="dialog-buttons download-cancel-row"):
                     yield Button("Cancel", id="btn-cancel", classes="btn-danger")
 
     def on_mount(self) -> None:

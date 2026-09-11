@@ -13,6 +13,7 @@ from src.environment import env
 from src.theme import THEMES, get_current_theme, set_current_theme
 from src.tui.widgets.dialogs import MessageDialog
 from src.tui.widgets.header import CyberHeader
+from src.tui.widgets.button_bar import ButtonBar
 
 
 class ThemeSelectScreen(Screen):
@@ -36,7 +37,7 @@ class ThemeSelectScreen(Screen):
                 yield Label("🎨 Personalize Enhancify Theme", classes="card-title")
                 yield Label(f"Current Theme: [bold {cur_theme.primary_color}]{cur_theme.name}[/]", id="active-theme-label", classes="card-desc")
 
-                with Horizontal():
+                with ButtonBar():
                     yield Button("🔙 Back to Settings [B]", id="btn-back", classes="btn-secondary")
 
                 yield ListView(id="themes-list")

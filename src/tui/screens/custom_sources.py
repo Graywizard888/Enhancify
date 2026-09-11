@@ -15,6 +15,7 @@ from src.environment import env
 from src.sources import SourceInfo, sources_mgr
 from src.tui.widgets.dialogs import ConfirmDialog, InputDialog, MessageDialog
 from src.tui.widgets.header import CyberHeader
+from src.tui.widgets.button_bar import ButtonBar
 
 
 class CustomSourcesScreen(Screen):
@@ -38,7 +39,7 @@ class CustomSourcesScreen(Screen):
                 yield Label("➕ Custom Sources Management", classes="card-title")
                 yield Label("Add or manage custom ReVanced / Morphe patch repositories:", classes="card-desc")
 
-                with Horizontal():
+                with ButtonBar():
                     yield Button("➕ Add New Source [A]", id="btn-add", classes="btn-primary")
                     yield Button("📖 Description & Help [H]", id="btn-help")
                     yield Button("🔙 Back [B]", id="btn-back", classes="btn-secondary")

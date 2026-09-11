@@ -18,6 +18,7 @@ from src.environment import env
 from src.sources import SourceInfo, sources_mgr
 from src.tui.widgets.dialogs import MessageDialog, ProgressModal
 from src.tui.widgets.header import CyberHeader
+from src.tui.widgets.button_bar import ButtonBar
 
 
 class SourceSelectScreen(Screen):
@@ -63,12 +64,14 @@ class SourceSelectScreen(Screen):
                         yield Label(f"📦 Active Source: [bold #00ff7f]{current_src}[/]", classes="card-title")
                         yield Label("Select a patch source below or refresh tags from GitHub/GitLab:", classes="card-desc")
 
-                with Horizontal():
+                with ButtonBar():
                     if self.is_patch_flow or is_multi:
                         yield Button("🚀 Proceed to Apps [P]", id="btn-proceed", classes="btn-primary")
                     yield Button("🔄 Refresh Tags [R]", id="btn-refresh-tags", classes="btn-primary" if not (self.is_patch_flow or is_multi) else "-style-default")
                     yield Button("➕ Custom Sources [C]", id="btn-custom-sources")
                     yield Button("🔙 Back [B]", id="btn-back", classes="btn-secondary")
+
+                yield Label("", id="channel-hint", classes="card-desc")
 
                 yield ListView(id="sources-list")
 
@@ -81,22 +84,21 @@ class SourceSelectScreen(Screen):
         self.populate_sources()
 
     def populate_sources(self) -> None:
-        """Populate list of sources."""
+        """Populate list of sources honouring the USE_PRE_RELEASE toggle."""
         sources = sources_mgr.get_all_sources()
         self.displayed_sources = sources
-        tags_cache = sources_mgr.get_cached_tags()
         current_src = config.get("SOURCE", "Anddea")
         is_multi = config.is_on("ENABLE_MULTIPATCHER")
+        use_pre = config.is_on("USE_PRE_RELEASE")
 
         sources_list = self.query_one("#sources-list", ListView)
         sources_list.clear()
 
         for s in sources:
-            cached_info = tags_cache.get(s.source, {})
-            lat = cached_info.get("latest", "")
-            pre = cached_info.get("prerelease", "")
-
-            version_str = lat if lat else (pre if pre else "No tag cached")
+            # Channel-aware tag: prerelease when enabled, stable otherwise.
+            version_str, channel = sources_mgr.get_display_tag(s.source)
+            if not version_str:
+                version_str = "No tag cached"
 
             if is_multi:
                 is_active = s.source in self.selected_multi_sources
@@ -110,7 +112,13 @@ class SourceSelectScreen(Screen):
                 txt.append("○ " if not is_multi else "☐ ", style="dim")
 
             txt.append(f"{s.source:<20}", style="bold #ffffff" if is_active else "#e6edf3")
-            txt.append(f" ({version_str})", style="#00e5ff" if lat else "#8b949e")
+            if version_str == "No tag cached":
+                txt.append(f" ({version_str})", style="#8b949e")
+            elif channel == "pre":
+                txt.append(f" ({version_str})", style="#ffd700")
+                txt.append(" [PRE]", style="bold #ffd700")
+            else:
+                txt.append(f" ({version_str})", style="#00e5ff")
 
             if s.is_custom:
                 txt.append(" [CUSTOM]", style="bold #d2a8ff")
@@ -118,6 +126,16 @@ class SourceSelectScreen(Screen):
             item = ListItem(Label(txt))
             item.source_name = s.source
             sources_list.append(item)
+
+        # Refresh the channel hint label so the mode is always visible.
+        try:
+            hint = self.query_one("#channel-hint", Label)
+            if use_pre:
+                hint.update("[Pre-release] Showing bleeding-edge prerelease tags — Refresh Tags [R] to update.")
+            else:
+                hint.update("[Stable] Showing stable release tags — Refresh Tags [R] to update.")
+        except Exception:
+            pass
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         """Handle selection of a source."""

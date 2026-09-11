@@ -18,6 +18,7 @@ from src.features import keystore_mgr
 from src.tui.screens.file_picker import FilePickerScreen
 from src.tui.widgets.dialogs import ConfirmDialog, InputDialog, MessageDialog
 from src.tui.widgets.header import CyberHeader
+from src.tui.widgets.button_bar import ButtonBar
 
 
 class KeystoreManagerScreen(Screen):
@@ -42,7 +43,7 @@ class KeystoreManagerScreen(Screen):
                 yield Label("🔑 Custom Keystore Management", classes="card-title")
                 yield Label("Generate or import custom cryptographic keystores for signing patched APKs:", classes="card-desc")
 
-                with Horizontal():
+                with ButtonBar():
                     yield Button("⚡ Generate Keystore [G]", id="btn-gen", classes="btn-primary")
                     yield Button("📥 Import File [I]", id="btn-import")
                     yield Button("🗑️ Delete All [D]", id="btn-delete", classes="btn-danger")

@@ -17,6 +17,7 @@ from src.config import config
 from src.environment import env
 from src.tui.widgets.dialogs import ConfirmDialog, InputDialog, MessageDialog
 from src.tui.widgets.header import CyberHeader
+from src.tui.widgets.button_bar import ButtonBar
 
 
 class TokenManagerScreen(Screen):
@@ -41,7 +42,7 @@ class TokenManagerScreen(Screen):
                 yield Label("🎫 GitHub Personal Access Token (Classic)", classes="card-title")
                 yield Label(self.get_token_status_text(), id="token-status-label", classes="card-desc")
 
-                with Horizontal():
+                with ButtonBar():
                     yield Button("➕ Add / Update Token [A]", id="btn-add", classes="btn-primary")
                     yield Button("🗑️ Delete Token [D]", id="btn-delete", classes="btn-danger")
                     yield Button("📖 Guide [G]", id="btn-guide")

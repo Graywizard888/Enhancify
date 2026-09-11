@@ -75,14 +75,16 @@ fetch_prerelease_tag() {
     [ -n "$token" ] && curl_args+=(-H "Authorization: Bearer $token")
 
     local full_response http_code response
-    full_response=$(curl "${curl_args[@]}" "https://api.github.com/repos/$repo/releases?per_page=1" 2>/dev/null)
+    # NOTE: per_page=1 returns the newest release of ANY type (often stable).
+    # Fetch a page and pick the first true prerelease (skip drafts).
+    full_response=$(curl "${curl_args[@]}" "https://api.github.com/repos/$repo/releases?per_page=30" 2>/dev/null)
     http_code="${full_response##*$'\n'}"
     response="${full_response%$'\n'*}"
 
     [ "$http_code" = "404" ] && return 2
 
-    if echo "$response" | jq -e '.[0].tag_name' &>/dev/null; then
-        echo "$response" | jq -r '.[0].tag_name'
+    if echo "$response" | jq -e '[.[] | select(.prerelease == true and .draft != true)][0].tag_name' &>/dev/null; then
+        echo "$response" | jq -r '[.[] | select(.prerelease == true and .draft != true)][0].tag_name'
     else
         echo ""
     fi

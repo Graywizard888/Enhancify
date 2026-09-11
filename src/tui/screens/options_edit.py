@@ -17,6 +17,7 @@ from src.environment import env
 from src.patches import patches_mgr
 from src.tui.widgets.dialogs import ConfirmDialog, InputDialog, MessageDialog
 from src.tui.widgets.header import CyberHeader
+from src.tui.widgets.button_bar import ButtonBar
 
 
 class OptionsEditScreen(Screen):
@@ -47,7 +48,7 @@ class OptionsEditScreen(Screen):
                 yield Label(f"⚙️ Configure Patch Options for [bold #00ff7f]{app_name}[/]", classes="card-title")
                 yield Label("Select an option below to modify its value, or proceed to start patching:", classes="card-desc")
 
-                with Horizontal():
+                with ButtonBar():
                     yield Button("🚀 Start Patching [S]", id="btn-start", classes="btn-primary")
                     yield Button("🔄 Reset Defaults [R]", id="btn-reset")
                     yield Button("🔙 Back [B]", id="btn-back", classes="btn-secondary")

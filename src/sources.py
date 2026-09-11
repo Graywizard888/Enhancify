@@ -236,10 +236,16 @@ class SourcesManager:
             return "", 0
 
     def fetch_prerelease_github_tag(self, repo: str) -> Tuple[str, int]:
-        """Fetch the latest prerelease tag from GitHub."""
-        url = f"https://api.github.com/repos/{repo}/releases?per_page=1"
+        """Fetch the latest prerelease tag from GitHub.
+
+        NOTE: ``/releases?per_page=1`` returns the newest release of ANY type
+        (stable or prerelease), so taking ``[0]`` is wrong — it usually
+        returns the stable tag. We fetch a page of releases and pick the
+        first entry flagged as an actual prerelease (skipping drafts).
+        """
+        url = f"https://api.github.com/repos/{repo}/releases?per_page=30"
         try:
-            r = requests.get(url, headers=self._get_headers(), timeout=5)
+            r = requests.get(url, headers=self._get_headers(), timeout=8)
             limit = int(r.headers.get("x-ratelimit-limit", 0))
             rem = int(r.headers.get("x-ratelimit-remaining", 0))
             reset = int(r.headers.get("x-ratelimit-reset", 0))
@@ -248,7 +254,15 @@ class SourcesManager:
             if r.status_code == 200:
                 data = r.json()
                 if isinstance(data, list) and data:
-                    return data[0].get("tag_name", ""), r.status_code
+                    for rel in data:
+                        if not isinstance(rel, dict):
+                            continue
+                        if rel.get("prerelease") is True and rel.get("draft") is not True:
+                            tag = rel.get("tag_name", "") or ""
+                            if tag:
+                                return tag, r.status_code
+                    # No prerelease found in this page — caller decides fallback.
+                    return "", r.status_code
             return "", r.status_code
         except Exception:
             return "", 0
@@ -287,6 +301,72 @@ class SourcesManager:
             except Exception:
                 pass
         return {}
+
+    # --- Pre-release aware helpers ---
+
+    #: Sources whose patches-list.json lives on main (stable) / dev (prerelease)
+    #: branches. Mirrors bash update_sources_json() without mutating sources.json.
+    PRE_RELEASE_DEV_BRANCH_SOURCES = frozenset({
+        "Anddea",
+        "De-Vanced",
+        "ReVancedExperiments",
+        "PikoTwitter",
+        "MorpheApp",
+        "Adobo",
+        "hoo-dles",
+        "AmpleRevanced",
+        "Paresh-Patches",
+        "brossh",
+        "Doom-Patches",
+    })
+
+    def get_effective_json_url(self, source_name: str, json_url: str) -> str:
+        """Return the JSON URL honouring the USE_PRE_RELEASE toggle.
+
+        For known sources the stable file is on ``main`` and the bleeding-edge
+        file is on ``dev`` — swap the branch segment at runtime instead of
+        rewriting sources.json like the bash version does.
+        """
+        if not json_url:
+            return json_url
+        use_pre = config.is_on("USE_PRE_RELEASE")
+        if source_name not in self.PRE_RELEASE_DEV_BRANCH_SOURCES:
+            return json_url
+        if use_pre:
+            # main -> dev
+            new_url = json_url.replace("/refs/heads/main/", "/refs/heads/dev/")
+            # Fallback for non-refs URLs (e.g. /raw/main/ or /blob/main/)
+            if new_url == json_url:
+                new_url = re.sub(r"/(raw|blob)/main/", r"/\1/dev/", json_url)
+                new_url = new_url.replace("/main/", "/dev/", 1) if "/main/" in new_url and "refs/heads" not in new_url else new_url
+            return new_url
+        # Stable mode — force dev -> main in case a stale dev URL was stored.
+        new_url = json_url.replace("/refs/heads/dev/", "/refs/heads/main/")
+        if new_url == json_url:
+            new_url = re.sub(r"/(raw|blob)/dev/", r"/\1/main/", json_url)
+        return new_url
+
+    def get_display_tag(self, source_name: str) -> Tuple[str, str]:
+        """Return (tag, channel) honouring USE_PRE_RELEASE.
+
+        channel is "pre" when a prerelease tag is shown, "stable" when a
+        stable tag is shown, "" when nothing is cached.
+        """
+        tags = self.get_cached_tags().get(source_name, {})
+        lat = (tags.get("latest") or "").strip()
+        pre = (tags.get("prerelease") or "").strip()
+        use_pre = config.is_on("USE_PRE_RELEASE")
+        if use_pre:
+            if pre:
+                return pre, "pre"
+            if lat:
+                return lat, "stable"
+            return "", ""
+        if lat:
+            return lat, "stable"
+        if pre:
+            return pre, "pre"
+        return "", ""
 
     def fetch_source_tags(self, source_info: SourceInfo) -> Tuple[str, str]:
         """Fetch latest and prerelease tag for a single source."""

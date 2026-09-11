@@ -632,13 +632,13 @@ bundleParser() {
     local CLI_API_URL
     if [ "$PATCHES_EXT" == "mpp" ]; then
         if [ "$USE_PRE_RELEASE" == "on" ]; then
-            CLI_API_URL="https://api.github.com/repos/MorpheApp/morphe-desktop/releases"
+            CLI_API_URL="https://api.github.com/repos/MorpheApp/morphe-desktop/releases?per_page=30"
         else
             CLI_API_URL="https://api.github.com/repos/MorpheApp/morphe-desktop/releases/latest"
         fi
     else
         if [ "$USE_PRE_RELEASE" == "on" ]; then
-            CLI_API_URL="https://api.github.com/repos/inotia00/revanced-cli/releases"
+            CLI_API_URL="https://api.github.com/repos/inotia00/revanced-cli/releases?per_page=30"
         else
             CLI_API_URL="https://api.github.com/repos/inotia00/revanced-cli/releases/latest"
         fi
@@ -650,8 +650,11 @@ bundleParser() {
     response_headers=$(<headers.tmp)
     log_github_api_request "$CLI_API_URL" "$response_headers"
 
-    if ! jq -r '
-        if type == "array" then .[0] else . end |
+    if ! jq -r --arg filter_mode "$USE_PRE_RELEASE" '
+        (if $filter_mode == "on"
+         then (if type == "array" then ((([.[] | select(.prerelease == true and .draft != true)][0])) // .[0]) else . end)
+         else (if type == "array" then .[0] else . end)
+         end) |
         "CLI_VERSION='\''\(.tag_name)'\''",
         (
             .assets[] |

@@ -14,6 +14,7 @@ from textual.widgets import Button, Footer, Label, ListItem, ListView
 
 from src.environment import env
 from src.tui.widgets.header import CyberHeader
+from src.tui.widgets.button_bar import ButtonBar
 from src.utils import format_size
 
 
@@ -57,7 +58,7 @@ class FilePickerScreen(Screen[Optional[Path]]):
                 yield Label("📂 Select File from Storage", classes="card-title")
                 yield Label(f"Current Path: [bold #00e5ff]{self.current_dir}[/]", id="path-label", classes="card-desc")
 
-                with Horizontal():
+                with ButtonBar():
                     yield Button("⬆️ Up Directory [U]", id="btn-up")
                     yield Button("❌ Cancel [B]", id="btn-cancel", classes="btn-secondary")
 

@@ -19,6 +19,7 @@ from src.environment import env
 from src.features import GMSCORE_PROVIDERS, GmsCoreProvider, gmscore_mgr
 from src.tui.widgets.dialogs import DownloadProgressModal, MessageDialog, ProgressModal
 from src.tui.widgets.header import CyberHeader
+from src.tui.widgets.button_bar import ButtonBar
 from src.utils import DownloadResult, format_size
 
 
@@ -50,7 +51,7 @@ class GmsCoreScreen(Screen):
                     classes="card-desc",
                 )
 
-                with Horizontal():
+                with ButtonBar():
                     yield Button(
                         "⚡ Download Selected APK",
                         id="btn-download",

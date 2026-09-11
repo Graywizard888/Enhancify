@@ -25,6 +25,7 @@ from src.tui.widgets.dialogs import (
     ProgressModal,
 )
 from src.tui.widgets.header import CyberHeader
+from src.tui.widgets.button_bar import ButtonBar
 from src.utils import DownloadResult
 
 
@@ -58,7 +59,7 @@ class AppSelectScreen(Screen):
 
                 yield Input(placeholder="🔍 Search apps by name or package...", id="search-input")
 
-                with Horizontal():
+                with ButtonBar():
                     yield Button("📥 Import File [I]", id="btn-import", classes="btn-primary")
                     yield Button("🔄 Refresh [R]", id="btn-refresh")
                     yield Button("🔙 Back [B]", id="btn-back", classes="btn-secondary")
