@@ -394,11 +394,7 @@ get_patches_extension_from_api() {
     local api_response_file="$1"
 
     local response_data
-    if [ "$USE_PRE_RELEASE" == "on" ]; then
-        response_data=$(jq 'if type == "array" then (([.[] | select(.prerelease == true and .draft != true)][0]) // .[0]) else . end' "$api_response_file" 2>/dev/null)
-    else
-        response_data=$(jq 'if type == "array" then .[0] else . end' "$api_response_file" 2>/dev/null)
-    fi
+    response_data=$(jq 'if type == "array" then .[0] else . end' "$api_response_file" 2>/dev/null)
 
     if jq -e '.assets[]? | select(.name | endswith(".mpp")) | select(.name | endswith(".asc") | not)' \
             <<< "$response_data" &>/dev/null; then
@@ -776,8 +772,7 @@ fetch_cli_from_github() {
 
     local CLI_API_URL
     if [ "$USE_PRE_RELEASE" == "on" ]; then
-        # Pick first true prerelease; fall back to newest when none published.
-        CLI_API_URL="https://api.github.com/repos/$cli_repo/releases?per_page=30"
+        CLI_API_URL="https://api.github.com/repos/$cli_repo/releases"
     else
         CLI_API_URL="https://api.github.com/repos/$cli_repo/releases/latest"
     fi
@@ -790,11 +785,8 @@ fetch_cli_from_github() {
         rm -f headers.tmp
     fi
 
-    if ! jq -r --arg filter_mode "$USE_PRE_RELEASE" '
-            if $filter_mode == "on"
-            then (if type == "array" then ((([.[] | select(.prerelease == true and .draft != true)][0])) // .[0]) else . end)
-            else (if type == "array" then .[0] else . end)
-            end |
+    if ! jq -r '
+            if type == "array" then .[0] else . end |
         "CLI_VERSION='\''\(.tag_name)'\''",
         (
             .assets[] |
@@ -908,7 +900,7 @@ fetchAssetsInfo() {
         rm -f response.tmp
     else
         if [ "$USE_PRE_RELEASE" == "on" ]; then
-            PATCHES_API_URL="https://api.github.com/repos/$REPO/releases?per_page=30"
+            PATCHES_API_URL="https://api.github.com/repos/$REPO/releases"
         else
             PATCHES_API_URL="https://api.github.com/repos/$REPO/releases/latest"
         fi
@@ -928,11 +920,7 @@ fetchAssetsInfo() {
             rm -f response.tmp
             notify info "assets fetching failed error 404\nretrying with gitlab.com"
             use_gitlab_api=true
-        elif ! jq -e --arg filter_mode "$USE_PRE_RELEASE" '
-                if $filter_mode == "on"
-                then (if type == "array" then ((([.[] | select(.prerelease == true and .draft != true)][0])) // .[0]) else . end)
-                else (if type == "array" then .[0] else . end)
-                end | .tag_name' response.tmp &>/dev/null; then
+        elif ! jq -e 'if type == "array" then .[0] else . end | .tag_name' response.tmp &>/dev/null; then
             rm -f response.tmp
             if [ "$SOURCE" == "ReVanced" ]; then
                 notify info "GitHub API Fetching Failed\nRetrying with ReVanced custom API"
@@ -943,21 +931,14 @@ fetchAssetsInfo() {
             fi
         else
             mkdir -p "$HOME/Enhancify"
-            jq -r --arg filter_mode "$USE_PRE_RELEASE" '
-                if $filter_mode == "on"
-                then (if type == "array" then ((([.[] | select(.prerelease == true and .draft != true)][0])) // .[0]) else . end)
-                else (if type == "array" then .[0] else . end)
-                end | .body // empty' \
+            jq -r 'if type == "array" then .[0] else . end | .body // empty' \
                 response.tmp > "$HOME/Enhancify/changelog.tmp" 2>/dev/null
 
             local PATCHES_EXT
             PATCHES_EXT=$(get_patches_extension_from_api "response.tmp")
 
-            if ! jq -r --arg ext "$PATCHES_EXT" --arg filter_mode "$USE_PRE_RELEASE" '
-                    (if $filter_mode == "on"
-                     then (if type == "array" then ((([.[] | select(.prerelease == true and .draft != true)][0])) // .[0]) else . end)
-                     else (if type == "array" then .[0] else . end)
-                     end) |
+            if ! jq -r --arg ext "$PATCHES_EXT" '
+                    if type == "array" then .[0] else . end |
                 "PATCHES_VERSION='\''\(.tag_name)'\''",
                 "PATCHES_EXT='\''" + $ext + "'\''",
                 (
