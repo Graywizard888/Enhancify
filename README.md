@@ -120,6 +120,26 @@ pkg update && pkg upgrade -y && pkg install git -y && termux-setup-storage && gi
   enhancify
 ```
 
+---
+
+## 🖥️ Python TUI (Textual)
+
+Enhancify ships with an interactive Python TUI alongside the classic bash UI.
+
+```bash
+pip install -r requirements.txt
+python main.py              # launch the TUI
+python main.py --smoke-test # headless display smoke test (Termux/DeX sizes)
+```
+
+**TUI features**
+- ⚡ "Enhancify Rebranded" boot splash — mirrors the classic `constants.sh` infobox (two phases: *Checking...* → real Last Updated / Status / Build Version / Release); **ESC** skips
+- 📊 Main-menu status bar: `Initiated Mode / Status / Arch` (classic block) + navigation hint
+- 📝 Patch selection — **long-press** a patch row to open its full description in a centred dialog (a quick tap still toggles it); the list merges universal + app-specific patch entries so no patches go missing
+- 📜 Asset fetch shows the `| Changelog |` dialog with **Download / Back** before anything downloads
+- 🚀 With `aria2c` as downloader, CLI **and** Patches download **simultaneously** with per-file gauges (classic `downloadBatchAria2c` parity)
+- ⚙️ Configure — **Appearance & Themes / Configuration Modules / Features Toggles / Rish Installer Flags** open centred dialogs; feature & Rish options are animated switches applied on **Save**
+
 
 
 
