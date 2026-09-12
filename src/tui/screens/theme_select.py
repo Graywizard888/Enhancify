@@ -33,7 +33,7 @@ class ThemeSelectScreen(Screen):
         yield CyberHeader(mode_label=mode_label, online_status=net_status)
 
         with ScrollableContainer(classes="container-box"):
-            with Vertical(classes="card"):
+            with Vertical(classes="card list-card"):
                 yield Label("🎨 Personalize Enhancify Theme", classes="card-title")
                 yield Label(f"Current Theme: [bold {cur_theme.primary_color}]{cur_theme.name}[/]", id="active-theme-label", classes="card-desc")
 

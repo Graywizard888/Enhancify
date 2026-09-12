@@ -1,15 +1,18 @@
 """
 Enhancify Patch Selection Screen
 Interactive checklist for enabling/disabling patches with real-time search,
-category filtering (Recommended / All / None), and patch description inspector.
+category filtering (Recommended / All / None), a patch description inspector,
+and long-press on a row to open the full description in a small centred dialog.
 """
 
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 from rich.text import Text
+from textual import events
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal, ScrollableContainer, Vertical
+from textual.message import Message
 from textual.screen import Screen
 from textual.widgets import Button, Checkbox, Footer, Input, Label, ListItem, ListView, Static
 
@@ -17,9 +20,89 @@ from src.assets import assets_mgr
 from src.config import config
 from src.environment import env
 from src.patches import patches_mgr
-from src.tui.widgets.dialogs import MessageDialog
+from src.tui.widgets.dialogs import MessageDialog, PatchDescriptionDialog
 from src.tui.widgets.header import CyberHeader
 from src.tui.widgets.button_bar import ButtonBar
+
+
+class PatchLongPressed(Message):
+    """Posted by PatchItem when a patch row is held (long-pressed)."""
+
+    def __init__(self, patch_name: str, recommended: bool = False, item: Optional["PatchItem"] = None):
+        self.patch_name = patch_name
+        self.recommended = recommended
+        self.item = item
+        super().__init__()
+
+
+class PatchItem(ListItem):
+    """ListItem with long-press detection (hold ~0.55s) for the description dialog."""
+
+    LONG_PRESS_SECONDS = 0.55
+    MOVE_TOLERANCE = 2  # cells; more than this = scrolling, not a press
+
+    def __init__(
+        self,
+        content: Any,
+        *,
+        patch_name: str,
+        recommended: bool = False,
+        **kwargs,
+    ):
+        super().__init__(content, **kwargs)
+        self.patch_name = patch_name
+        self.recommended = recommended
+        self._press_timer = None
+        self._down_pos: Optional[tuple] = None
+        self._long_press_fired = False
+
+    # ------------------------------------------------------------- long press
+
+    def on_mouse_down(self, event: events.MouseDown) -> None:
+        self._down_pos = (event.x, event.y)
+        self._long_press_fired = False
+        self._cancel_press_timer()
+        try:
+            self._press_timer = self.set_timer(self.LONG_PRESS_SECONDS, self._fire_long_press)
+        except Exception:
+            self._press_timer = None
+
+    def on_mouse_up(self, event: events.MouseUp) -> None:
+        self._down_pos = None
+        self._cancel_press_timer()
+
+    def on_mouse_move(self, event: events.MouseMove) -> None:
+        if self._down_pos is None:
+            return
+        dx = abs(event.x - self._down_pos[0])
+        dy = abs(event.y - self._down_pos[1])
+        if dx > self.MOVE_TOLERANCE or dy > self.MOVE_TOLERANCE:
+            # User is scrolling — not a long press.
+            self._cancel_press_timer()
+            self._down_pos = None
+
+    def on_leave(self, event: events.Leave) -> None:
+        self._cancel_press_timer()
+        self._down_pos = None
+
+    def _cancel_press_timer(self) -> None:
+        if self._press_timer is not None:
+            try:
+                self._press_timer.cancel()
+            except Exception:
+                pass
+            self._press_timer = None
+
+    def _fire_long_press(self) -> None:
+        self._press_timer = None
+        self._long_press_fired = True
+        self.post_message(PatchLongPressed(self.patch_name, self.recommended, self))
+
+    # NOTE: no _on_click override here. Textual 8.x dispatches handlers at
+    # every MRO level, so overriding _on_click would run BOTH this method
+    # and the base ListItem._on_click (double toggle). The base handler
+    # posts exactly one click per press; the screen suppresses that click
+    # when it follows a long press (see PatchSelectScreen.on_list_view_selected).
 
 
 class PatchSelectScreen(Screen):
@@ -52,16 +135,18 @@ class PatchSelectScreen(Screen):
         yield CyberHeader(mode_label=mode_label, online_status=net_status)
 
         with ScrollableContainer(classes="container-box"):
-            with Vertical(classes="card"):
+            with Vertical(classes="card list-card"):
                 yield Label(f"🛠️ Select Patches for [bold #00ff7f]{app_name}[/]", classes="card-title")
                 yield Label("Enabled: 0 / 0", id="patch-count-label", classes="card-desc")
 
                 yield Input(placeholder="🔍 Search patches by name or keyword...", id="search-patches")
+                yield Label("💡 Tip: hold (long-press) a patch row to open its full description.", id="long-press-hint", classes="card-desc")
 
                 with ButtonBar():
                     yield Button("⚡ Recommended [R]", id="btn-rec", classes="btn-primary")
                     yield Button("✅ Select All [A]", id="btn-all")
                     yield Button("❌ Deselect All [D]", id="btn-none")
+                with ButtonBar():
                     yield Button("🚀 Next: Options [N]", id="btn-next", classes="btn-primary")
                     yield Button("🔙 Back [B]", id="btn-back", classes="btn-secondary")
 
@@ -98,23 +183,44 @@ class PatchSelectScreen(Screen):
         except Exception:
             meta_list = []
 
-        # Find app entry in meta_list
-        app_entry = None
+        # Collect ALL entries that apply to this app: the app-specific entry
+        # plus universal (pkgName: null) entries. Taking only the first match
+        # used to silently drop patches defined in the other entry.
+        app_entries: List[Dict[str, Any]] = []
         for item in meta_list:
             if item.get("pkgName") == pkg_name or item.get("pkgName") is None:
-                app_entry = item
-                break
+                app_entries.append(item)
 
-        if not app_entry:
+        if not app_entries:
             self.app.push_screen(
                 MessageDialog("Error", f"No patch entries found for package: {pkg_name}")
             )
             return
 
-        rec = app_entry.get("patches", {}).get("recommended", [])
-        opt = app_entry.get("patches", {}).get("optional", [])
-        self.patch_descriptions = app_entry.get("descriptions", {})
-        self.patch_options = app_entry.get("options", [])
+        # Merge recommended / optional / descriptions / options across entries
+        rec: List[str] = []
+        opt: List[str] = []
+        descriptions: Dict[str, str] = {}
+        options: List[Dict[str, Any]] = []
+        seen_opts = set()
+        for item in app_entries:
+            patches = item.get("patches", {}) or {}
+            for name in patches.get("recommended", []) or []:
+                if name not in rec:
+                    rec.append(name)
+            for name in patches.get("optional", []) or []:
+                if name not in rec and name not in opt:
+                    opt.append(name)
+            for k, v in (item.get("descriptions") or {}).items():
+                descriptions.setdefault(k, v)
+            for o in item.get("options", []) or []:
+                okey = (o.get("patchName"), o.get("key"))
+                if okey not in seen_opts:
+                    seen_opts.add(okey)
+                    options.append(o)
+
+        self.patch_descriptions = descriptions
+        self.patch_options = options
 
         # Load saved enabled patches or default to recommended
         saved_enabled = patches_mgr.get_enabled_patches_for_pkg(source_name, pkg_name, meta_list)
@@ -167,14 +273,24 @@ class PatchSelectScreen(Screen):
             if is_rec:
                 txt.append(" [RECOMMENDED]", style="bold #00ff7f")
 
-            item = ListItem(Label(txt))
-            item.patch_name = name
+            item = PatchItem(Label(txt), patch_name=name, recommended=is_rec)
             item.patch_idx = idx
             p_list.append(item)
 
     def on_input_changed(self, event: Input.Changed) -> None:
         if event.input.id == "search-patches":
             self.filter_and_display(event.value)
+
+    def on_patch_long_pressed(self, event: PatchLongPressed) -> None:
+        """Long-press on a patch row → small centred description dialog."""
+        desc = self.patch_descriptions.get(event.patch_name, "No description available.")
+        self.app.push_screen(
+            PatchDescriptionDialog(
+                event.patch_name,
+                desc,
+                recommended=event.recommended,
+            )
+        )
 
     def on_list_view_highlighted(self, event: ListView.Highlighted) -> None:
         """Update description panel when an item is focused."""
@@ -195,6 +311,12 @@ class PatchSelectScreen(Screen):
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         """Toggle patch on click or Enter."""
+        # A long press already opened the description dialog; swallow the
+        # click that follows it so the patch is not toggled as a side effect.
+        if getattr(event.item, "_long_press_fired", False):
+            event.item._long_press_fired = False
+            return
+
         pname = getattr(event.item, "patch_name", None)
         if not pname and event.item.id and event.item.id.startswith("patch-"):
             idx = int(event.item.id[6:])

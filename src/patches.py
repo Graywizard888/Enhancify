@@ -80,14 +80,16 @@ class PatchesManager:
             if entry.get("pkgName") == pkg_name:
                 return set(entry.get("patches", []))
 
-        # Default to recommended patches from available metadata
+        # Default to recommended patches from available metadata —
+        # merge the app-specific entry with universal (null) entries so no
+        # patch set is silently dropped.
+        merged: Set[str] = set()
         for item in available_patches_meta:
             if item.get("pkgName") == pkg_name or item.get("pkgName") is None:
                 rec = item.get("patches", {}).get("recommended", [])
-                if rec:
-                    return set(rec)
+                merged.update(rec)
 
-        return set()
+        return merged
 
     def get_options_for_pkg(
         self,

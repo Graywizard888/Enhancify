@@ -19,7 +19,14 @@ import requests
 from src.config import config
 from src.environment import env
 from src.sources import SourceInfo, sources_mgr
-from src.utils import DownloadResult, download_file, download_file_ex, format_size, run_command
+from src.utils import (
+    DownloadResult,
+    download_file,
+    download_file_ex,
+    download_files_parallel,
+    format_size,
+    run_command,
+)
 import threading
 
 
@@ -368,11 +375,16 @@ class AssetsManager:
         progress_callback: Optional[Callable[[str, int, int, str], None]] = None,
         cancel_event: Optional[threading.Event] = None,
         file_start_callback: Optional[Callable[[str, int], None]] = None,
+        use_parallel: bool = True,
     ) -> DownloadResult:
         """Download CLI and Patches binaries with progress tracking.
 
         progress_callback(label, current, total, pct)
         file_start_callback(label, size) — fired when a new file begins downloading
+
+        When aria2c is available and network acceleration is enabled, BOTH
+        files are downloaded at the same time (classic downloadBatchAria2c
+        parity) so the UI can show both gauges simultaneously.
         """
         src_dir = self.assets_dir / info.source_name
         src_dir.mkdir(parents=True, exist_ok=True)
@@ -380,6 +392,74 @@ class AssetsManager:
         target_patches = src_dir / f"Patches-{info.patches_version}.{info.patches_ext}"
         target_cli = self.assets_dir / f"CLI-{info.cli_version}.jar"
 
+        # -------------------------------------------------- pending detection
+        def _cli_ready() -> bool:
+            if target_cli.exists() and (
+                info.cli_size <= 0 or target_cli.stat().st_size == info.cli_size
+            ):
+                return True
+            if self.get_cached_cli(info.source_name, info.cli_version, target_cli):
+                return target_cli.exists()
+            return False
+
+        def _patches_ready() -> bool:
+            return target_patches.exists() and (
+                info.patches_size <= 0
+                or target_patches.stat().st_size == info.patches_size
+            )
+
+        pending: List[Tuple[str, str, Path, int]] = []  # (label, url, path, size)
+        if not _cli_ready():
+            pending.append(
+                (f"CLI-{info.cli_version}.jar", info.cli_url, target_cli, info.cli_size)
+            )
+        if not _patches_ready():
+            pending.append(
+                (
+                    f"Patches-{info.patches_version}.{info.patches_ext}",
+                    info.patches_url,
+                    target_patches,
+                    info.patches_size,
+                )
+            )
+
+        if not pending:
+            return DownloadResult.OK
+
+        aria2_parallel = (
+            use_parallel
+            and not config.is_on("DISABLE_NETWORK_ACCELERATION")
+            and shutil.which("aria2c") is not None
+            and len(pending) >= 2
+        )
+
+        if aria2_parallel:
+            # ---------------- simultaneous aria2c batch (classic parity) ----
+            if cancel_event is not None and cancel_event.is_set():
+                return DownloadResult.CANCELLED
+            labels = [p[0] for p in pending]
+            if file_start_callback:
+                for label, _url, _path, size in pending:
+                    file_start_callback(label, size)
+
+            results = download_files_parallel(
+                [(url, path, size) for _label, url, path, size in pending],
+                labels,
+                progress_callback=progress_callback,
+                cancel_event=cancel_event,
+            )
+            if any(r == DownloadResult.CANCELLED for r in results.values()):
+                return DownloadResult.CANCELLED
+
+            cli_label = f"CLI-{info.cli_version}.jar"
+            patches_label = f"Patches-{info.patches_version}.{info.patches_ext}"
+            cli_ok = results.get(cli_label) == DownloadResult.OK
+            patches_ok = results.get(patches_label) == DownloadResult.OK
+            if cli_ok:
+                self.save_cli_to_cache(info.source_name, info.cli_version, target_cli)
+            return DownloadResult.OK if (cli_ok and patches_ok) else DownloadResult.ERROR
+
+        # --------------------------------------- sequential (CLI then Patches)
         # 1. Check or download CLI
         cli_label = f"CLI-{info.cli_version}.jar"
         cli_ok = False

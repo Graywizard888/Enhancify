@@ -43,7 +43,7 @@ class GmsCoreScreen(Screen):
         yield CyberHeader(mode_label=mode_label, online_status=net_status)
 
         with ScrollableContainer(classes="container-box"):
-            with Vertical(classes="card"):
+            with Vertical(classes="card list-card"):
                 yield Label("🔌 Select GmsCore (MicroG) Provider", classes="card-title")
                 yield Label(
                     "Choose a GmsCore build to view release notes and download.\n"

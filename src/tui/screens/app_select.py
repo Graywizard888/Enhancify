@@ -1,6 +1,13 @@
 """
 Enhancify App Selection Screen
 Displays supported apps for the active patch source, with search filtering and direct file import.
+
+Asset fetch flow (classic parity):
+  1. Fetch release metadata
+  2. Show '| Changelog |' dialog with Download / Back buttons
+  3. Download CLI + Patches (simultaneously via aria2c when available,
+     showing both gauges at once — classic downloadBatchAria2c mixedgauge)
+  4. Parse patches list (API or CLI)
 """
 
 from pathlib import Path
@@ -19,6 +26,7 @@ from src.config import config
 from src.environment import env
 from src.tui.screens.file_picker import FilePickerScreen
 from src.tui.widgets.dialogs import (
+    ChangelogDialog,
     DownloadProgressModal,
     MessageDialog,
     ParseProgressModal,
@@ -27,6 +35,8 @@ from src.tui.widgets.dialogs import (
 from src.tui.widgets.header import CyberHeader
 from src.tui.widgets.button_bar import ButtonBar
 from src.utils import DownloadResult
+
+import shutil
 
 
 class AppSelectScreen(Screen):
@@ -53,7 +63,7 @@ class AppSelectScreen(Screen):
         yield CyberHeader(mode_label=mode_label, online_status=net_status)
 
         with ScrollableContainer(classes="container-box"):
-            with Vertical(classes="card"):
+            with Vertical(classes="card list-card"):
                 yield Label("📱 Select Target Application", classes="card-title")
                 yield Label("Choose an application to patch or import an APK from storage:", classes="card-desc")
 
@@ -72,9 +82,10 @@ class AppSelectScreen(Screen):
         self.active_source = config.get("SOURCE", "Anddea")
         self.load_source_apps()
 
+    # ------------------------------------------------------------ asset flow
+
     def load_source_apps(self) -> None:
-        """Ensure assets are downloaded and load supported apps."""
-        # Phase 1: lightweight fetch of release metadata
+        """Phase 1: lightweight fetch of release metadata."""
         modal = ProgressModal(
             "Loading Assets", f"Fetching metadata for {self.active_source}..."
         )
@@ -83,7 +94,6 @@ class AppSelectScreen(Screen):
 
     @work(thread=True)
     def run_assets_worker(self, modal: ProgressModal) -> None:
-        cancelled = False
         try:
             rel = assets_mgr.fetch_source_release_info(self.active_source)
             if not rel:
@@ -97,105 +107,168 @@ class AppSelectScreen(Screen):
                 )
                 return
 
-            self.release_info = rel
+            # Hand back to the UI thread — the changelog dialog must be
+            # shown BEFORE any download starts (classic parity).
             self.app.call_from_thread(modal.safe_dismiss)
+            self.app.call_from_thread(self._on_release_fetched, rel)
+        except Exception as e:
+            try:
+                self.app.call_from_thread(modal.safe_dismiss)
+            except Exception:
+                pass
+            self.app.call_from_thread(
+                self.app.push_screen,
+                MessageDialog("Error", f"Asset load failed: {e}"),
+            )
 
-            # Phase 2: download CLI + Patches with original gauge texts + cancel
-            pending = []
-            cli_label = f"CLI-{rel.cli_version}.jar"
+    def _on_release_fetched(self, rel: AssetReleaseInfo) -> None:
+        """UI thread — decide: changelog dialog → download → parse."""
+        self.release_info = rel
+        pending = self._compute_pending(rel)
+        if not pending:
+            self._continue_after_download(rel)
+            return
+
+        changelog = (rel.changelog or "").strip()
+        if changelog:
             patches_label = f"Patches-{rel.patches_version}.{rel.patches_ext}"
-            cli_path = assets_mgr.assets_dir / cli_label
-            patches_path = (
-                assets_mgr.assets_dir
-                / rel.source_name
-                / patches_label
+            dlg = ChangelogDialog(
+                source_name=rel.source_name,
+                patches_label=patches_label,
+                size_bytes=rel.patches_size,
+                changelog=changelog,
             )
-            need_cli = not (
-                cli_path.exists()
-                and (rel.cli_size <= 0 or cli_path.stat().st_size == rel.cli_size)
-            ) and not assets_mgr.get_cached_cli(rel.source_name, rel.cli_version, cli_path)
-            # get_cached_cli may have just populated cli_path
-            if cli_path.exists() and (rel.cli_size <= 0 or cli_path.stat().st_size == rel.cli_size):
-                need_cli = False
-            need_patches = not (
-                patches_path.exists()
-                and (rel.patches_size <= 0 or patches_path.stat().st_size == rel.patches_size)
+            self.app.push_screen(dlg, self._on_changelog_result)
+        else:
+            self._start_download_phase(rel)
+
+    def _on_changelog_result(self, result: Optional[bool]) -> None:
+        """Changelog dialog callback: Download → proceed, Back → leave screen."""
+        if result is True and self.release_info is not None:
+            self._start_download_phase(self.release_info)
+        else:
+            # User pressed Back — abort the fetch and return to the menu.
+            try:
+                self.app.pop_screen()
+            except Exception:
+                pass
+
+    def _compute_pending(self, rel: AssetReleaseInfo) -> List[tuple]:
+        """[(label, size)] of assets still missing on disk."""
+        cli_path = assets_mgr.assets_dir / f"CLI-{rel.cli_version}.jar"
+        patches_path = assets_mgr.assets_dir / rel.source_name / (
+            f"Patches-{rel.patches_version}.{rel.patches_ext}"
+        )
+        pending: List[tuple] = []
+        need_cli = not (
+            cli_path.exists()
+            and (rel.cli_size <= 0 or cli_path.stat().st_size == rel.cli_size)
+        ) and not assets_mgr.get_cached_cli(rel.source_name, rel.cli_version, cli_path)
+        if cli_path.exists() and (rel.cli_size <= 0 or cli_path.stat().st_size == rel.cli_size):
+            need_cli = False
+        if need_cli:
+            pending.append((f"CLI-{rel.cli_version}.jar", rel.cli_size))
+        need_patches = not (
+            patches_path.exists()
+            and (rel.patches_size <= 0 or patches_path.stat().st_size == rel.patches_size)
+        )
+        if need_patches:
+            pending.append((f"Patches-{rel.patches_version}.{rel.patches_ext}", rel.patches_size))
+        return pending
+
+    def _start_download_phase(self, rel: AssetReleaseInfo) -> None:
+        """Push the download modal (mixedgauge when aria2c batch) + worker."""
+        pending = self._compute_pending(rel)
+        if not pending:
+            self._continue_after_download(rel)
+            return
+
+        total_sz = sum(s for _, s in pending if s > 0)
+        aria2_available = (
+            not config.is_on("DISABLE_NETWORK_ACCELERATION")
+            and shutil.which("aria2c") is not None
+        )
+
+        if aria2_available and len(pending) >= 2:
+            # Simultaneous download — show per-file rows (classic mixedgauge)
+            dl_modal = DownloadProgressModal.for_assets_batch(
+                len(pending),
+                total_sz,
+                accelerated=True,
+                files=[(label, size) for label, size in pending],
             )
-            if need_cli:
-                pending.append((cli_label, rel.cli_size))
-            if need_patches:
-                pending.append((patches_label, rel.patches_size))
+        elif len(pending) > 1:
+            dl_modal = DownloadProgressModal.for_assets_batch(
+                len(pending), total_sz, accelerated=False
+            )
+        else:
+            dl_modal = DownloadProgressModal.for_asset_file(pending[0][0], pending[0][1])
 
-            dl_result = DownloadResult.OK
-            if pending:
-                total_sz = sum(s for _, s in pending if s > 0)
-                if len(pending) > 1:
-                    dl_modal = DownloadProgressModal.for_assets_batch(
-                        len(pending), total_sz, accelerated=True
-                    )
-                else:
-                    dl_modal = DownloadProgressModal.for_asset_file(
-                        pending[0][0], pending[0][1]
-                    )
+        self.app.push_screen(dl_modal)
+        self.run_download_worker(dl_modal, rel)
 
-                # Push download modal on UI thread and wait briefly for mount
-                ready = __import__("threading").Event()
+    @work(thread=True)
+    def run_download_worker(self, dl_modal: DownloadProgressModal, rel: AssetReleaseInfo) -> None:
+        def on_file_start(label: str, size: int) -> None:
+            if dl_modal._batch:
+                dl_modal.register_batch_file(label, size)
+            else:
+                dl_modal.switch_to_asset_file(label, size)
 
-                def _push():
-                    self.app.push_screen(dl_modal)
-                    ready.set()
+        def on_prog(label: str, cur: int, tot: int, pct: str) -> None:
+            if dl_modal._batch:
+                dl_modal.on_file_progress(label, cur, tot, pct)
+            else:
+                dl_modal.on_progress(cur, tot, pct)
 
-                self.app.call_from_thread(_push)
-                ready.wait(timeout=2.0)
+        dl_result = assets_mgr.download_assets(
+            rel,
+            progress_callback=on_prog,
+            cancel_event=dl_modal.cancel_event,
+            file_start_callback=on_file_start,
+        )
 
-                def on_file_start(label: str, size: int) -> None:
-                    dl_modal.switch_to_asset_file(label, size)
+        # Mark finished batch files complete for a final gauge repaint
+        if dl_modal._batch and dl_result == DownloadResult.OK:
+            for label in dl_modal._batch:
+                dl_modal.mark_batch_file_done(label, ok=True)
 
-                def on_prog(label: str, cur: int, tot: int, pct: str) -> None:
-                    dl_modal.on_progress(cur, tot, pct)
+        self.app.call_from_thread(
+            dl_modal.safe_dismiss,
+            "cancelled" if dl_result == DownloadResult.CANCELLED else None,
+        )
+        if dl_result == DownloadResult.CANCELLED:
+            self.app.call_from_thread(
+                self.app.push_screen,
+                MessageDialog("Cancelled", "Asset download cancelled."),
+            )
+            return
+        if dl_result != DownloadResult.OK:
+            self.app.call_from_thread(
+                self.app.push_screen,
+                MessageDialog(
+                    "Download Failed",
+                    "Unable to download CLI / Patches completely.\n\n"
+                    "Retry or change your Network.",
+                ),
+            )
+            return
 
-                dl_result = assets_mgr.download_assets(
-                    rel,
-                    progress_callback=on_prog,
-                    cancel_event=dl_modal.cancel_event,
-                    file_start_callback=on_file_start,
-                )
-                self.app.call_from_thread(
-                    dl_modal.safe_dismiss,
-                    "cancelled" if dl_result == DownloadResult.CANCELLED else None,
-                )
-                if dl_result == DownloadResult.CANCELLED:
-                    cancelled = True
-                    self.app.call_from_thread(
-                        self.app.push_screen,
-                        MessageDialog("Cancelled", "Asset download cancelled."),
-                    )
-                    return
-                if dl_result != DownloadResult.OK:
-                    self.app.call_from_thread(
-                        self.app.push_screen,
-                        MessageDialog(
-                            "Download Failed",
-                            "Unable to download CLI / Patches completely.\n\n"
-                            "Retry or change your Network.",
-                        ),
-                    )
-                    return
+        self.app.call_from_thread(self._continue_after_download, rel)
 
+    def _continue_after_download(self, rel: AssetReleaseInfo) -> None:
+        """Phase 3: parse patches list (API or CLI) with gradient spinner."""
+        parse_modal = ParseProgressModal(self.active_source, from_cli=True)
+        self.app.push_screen(parse_modal)
+        self.run_parse_worker(parse_modal, rel)
+
+    @work(thread=True)
+    def run_parse_worker(self, parse_modal: ParseProgressModal, rel: AssetReleaseInfo) -> None:
+        cancelled = False
+        try:
             # Detect capabilities
             cli_jar = assets_mgr.assets_dir / f"CLI-{rel.cli_version}.jar"
             assets_mgr.detect_cli_capabilities(cli_jar)
-
-            # Phase 3: parse patches list (API or CLI) with gradient spinner
-            parse_modal = ParseProgressModal(self.active_source, from_cli=True)
-            ready2 = __import__("threading").Event()
-
-            def _push_parse():
-                self.app.push_screen(parse_modal)
-                ready2.set()
-
-            self.app.call_from_thread(_push_parse)
-            ready2.wait(timeout=2.0)
 
             def phase_cb(phase: str) -> None:
                 if phase == "api":
@@ -253,10 +326,6 @@ class AppSelectScreen(Screen):
                         )
                 self.apps_data = sorted(apps, key=lambda x: x["appName"])
         except Exception as e:
-            try:
-                self.app.call_from_thread(modal.safe_dismiss)
-            except Exception:
-                pass
             self.app.call_from_thread(
                 self.app.push_screen,
                 MessageDialog("Error", f"Asset load failed: {e}"),
@@ -264,6 +333,8 @@ class AppSelectScreen(Screen):
         finally:
             if not cancelled:
                 self.app.call_from_thread(self.filter_and_display_apps)
+
+    # ------------------------------------------------------------- app list
 
     def filter_and_display_apps(self, query: str = "") -> None:
         """Filter app list by search text and render in ListView."""
@@ -284,7 +355,7 @@ class AppSelectScreen(Screen):
             txt = Text()
             txt.append("📱 ", style="bold #00ff7f")
             txt.append(f"{a['appName']:<22}", style="bold #ffffff")
-            txt.append(f" [{a['pkgName']}]", style="#8b949e")
+            txt.append(f" [{a['pkgName']}] ", style="#8b949e")
 
             item = ListItem(Label(txt))
             item.app_idx = idx

@@ -12,6 +12,7 @@ from textual.widgets import Button, Footer, Label, Static
 from src.config import config
 from src.environment import env
 from src.tui.widgets.header import CyberHeader
+from src.tui.widgets.status_bar import CyberStatusBar
 
 
 class MainMenuScreen(Screen):
@@ -32,8 +33,11 @@ class MainMenuScreen(Screen):
     def compose(self) -> ComposeResult:
         has_root, has_rish, mode_label = env.check_privileges()
         _, _, net_status = env.check_network()
+        arch = env.get_arch()
 
         yield CyberHeader(mode_label=mode_label, online_status=net_status)
+        # Classic parity: "Initiated Mode / Status / Arch" block on top of the menu
+        yield CyberStatusBar(mode_label=mode_label, online_status=net_status, arch=arch)
 
         with ScrollableContainer(classes="container-box"):
             with Vertical(classes="card"):

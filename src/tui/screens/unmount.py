@@ -34,7 +34,7 @@ class UnmountScreen(Screen):
         yield CyberHeader(mode_label=mode_label, online_status=net_status)
 
         with ScrollableContainer(classes="container-box"):
-            with Vertical(classes="card"):
+            with Vertical(classes="card list-card"):
                 yield Label("🔒 Unmount Root Patched Application", classes="card-title")
                 yield Label("Select an active mounted application to unmount and remove boot scripts:", classes="card-desc")
 

@@ -48,7 +48,7 @@ class SourceSelectScreen(Screen):
         yield CyberHeader(mode_label=mode_label, online_status=net_status)
 
         with ScrollableContainer(classes="container-box"):
-            with Vertical(classes="card"):
+            with Vertical(classes="card list-card"):
                 if self.is_patch_flow:
                     if is_multi:
                         yield Label("🚀 Step 1: Select Patch Sources (Multi-Patcher)", classes="card-title")

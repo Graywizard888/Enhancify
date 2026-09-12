@@ -35,7 +35,7 @@ class CustomSourcesScreen(Screen):
         yield CyberHeader(mode_label=mode_label, online_status=net_status)
 
         with ScrollableContainer(classes="container-box"):
-            with Vertical(classes="card"):
+            with Vertical(classes="card list-card"):
                 yield Label("➕ Custom Sources Management", classes="card-title")
                 yield Label("Add or manage custom ReVanced / Morphe patch repositories:", classes="card-desc")
 

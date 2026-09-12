@@ -7,12 +7,12 @@ with cybernetic styling, gradient bars/spinners, and cancel support.
 from __future__ import annotations
 
 import threading
-from typing import Any, Callable, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from rich.text import Text
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, LoadingIndicator, Static
 from src.tui.widgets.button_bar import ButtonBar
@@ -223,6 +223,8 @@ class DownloadProgressModal(ModalScreen[Optional[str]]):
         self._cancelled = False
         self._current = 0
         self._detail = ""
+        self._batch: Optional[Dict[str, Dict[str, Any]]] = None
+        self._batch_accel = False
 
     # ----- factory helpers (bash-parity copy) -----
 
@@ -243,8 +245,13 @@ class DownloadProgressModal(ModalScreen[Optional[str]]):
         file_count: int,
         total_size: int = 0,
         accelerated: bool = True,
+        files: Optional[List[Tuple[str, int]]] = None,
     ) -> "DownloadProgressModal":
-        """Multi-file assets header — bash downloadBatchAria2c mixedgauge."""
+        """Multi-file assets header — bash downloadBatchAria2c mixedgauge.
+
+        ``files`` (label, size) enables the per-file mixed-gauge rows shown
+        while aria2c downloads the CLI + Patches simultaneously.
+        """
         total_disp = format_size(total_size) if total_size > 0 else "unknown"
         accel = " | Accelerated: 8 parts each" if accelerated else ""
         body = (
@@ -252,7 +259,23 @@ class DownloadProgressModal(ModalScreen[Optional[str]]):
             f"Downloading {file_count} file(s) simultaneously\n"
             f"Total: {total_disp}{accel}\n"
         )
-        return cls(title="| Downloading Assets |", body=body, total_size=total_size)
+        modal = cls(title="| Downloading Assets |", body=body, total_size=total_size)
+        if files:
+            modal._batch: Dict[str, Dict[str, Any]] = {}
+            for label, size in files:
+                modal._batch[label] = {
+                    "size": size,
+                    "cur": 0,
+                    "pct": 0,
+                    "done": False,
+                    "failed": False,
+                    "started": False,
+                }
+            modal._batch_accel = accelerated
+        else:
+            modal._batch = None
+            modal._batch_accel = accelerated
+        return modal
 
     @classmethod
     def for_app_scrape(cls, app_name: str, version: str) -> "DownloadProgressModal":
@@ -295,6 +318,8 @@ class DownloadProgressModal(ModalScreen[Optional[str]]):
         with Vertical(classes="dialog-box download-dialog"):
             yield Label(self.dialog_title, classes="dialog-title")
             yield Label(self._body, id="dl-body", classes="dialog-message download-meta")
+            if self._batch:
+                yield Label("", id="dl-rows", classes="download-detail batch-rows")
             yield GradientProgressBar(id="dl-bar")
             yield Label("", id="dl-detail", classes="download-detail")
             if self.allow_cancel:
@@ -307,6 +332,99 @@ class DownloadProgressModal(ModalScreen[Optional[str]]):
             bar.set_fraction(0.0)
         except Exception:
             pass
+        if self._batch:
+            self._render_batch()
+
+    # ------------------------------------------------------- batch (aria2c)
+
+    def register_batch_file(self, label: str, size: int = 0) -> None:
+        """Mark a batch file as started (aria2c fired up for it)."""
+        if not self._batch:
+            return
+        entry = self._batch.setdefault(
+            label,
+            {"size": 0, "cur": 0, "pct": 0, "done": False, "failed": False, "started": False},
+        )
+        entry["started"] = True
+        if size > 0:
+            entry["size"] = size
+
+    def on_file_progress(self, label: str, cur: int, total: int, pct: str = "") -> None:
+        """Per-file progress for the simultaneous aria2c mixed-gauge view."""
+        entry = self._batch.get(label) if self._batch else None
+        if entry is None:
+            return
+        entry["started"] = True
+        if total > 0:
+            entry["size"] = total
+            entry["cur"] = min(cur, total)
+            entry["pct"] = int(cur * 100 / total)
+        elif pct:
+            pct_num = "".join(c for c in pct if c.isdigit())
+            entry["pct"] = int(pct_num) if pct_num else entry["pct"]
+        self._render_batch()
+
+    def mark_batch_file_done(self, label: str, ok: bool = True) -> None:
+        if not self._batch or label not in self._batch:
+            return
+        self._batch[label]["done"] = True
+        self._batch[label]["failed"] = not ok
+        self._batch[label]["pct"] = 100 if ok else self._batch[label]["pct"]
+        self._render_batch()
+
+    def _render_batch(self) -> None:
+        """Render the per-file mixed-gauge rows + overall gradient bar."""
+
+        def _apply() -> None:
+            try:
+                rows = self.query_one("#dl-rows", Label)
+            except Exception:
+                return
+            lines: List[str] = []
+            total_cur = 0
+            total_known = 0
+            for label, info in self._batch.items():  # type: ignore[union-attr]
+                size = info.get("size", 0)
+                if info.get("done"):
+                    mark = "✔" if not info.get("failed") else "✖"
+                    color = "#00ff7f" if not info.get("failed") else "#ff4444"
+                    lines.append(
+                        f"[bold {color}]{mark}[/] {label} — "
+                        f"{'complete' if not info.get('failed') else 'failed'}"
+                    )
+                    continue
+                if not info.get("started"):
+                    lines.append(f"[dim]⏳ {label} — waiting...[/]")
+                    continue
+                if size > 0:
+                    total_cur += info.get("cur", 0)
+                    total_known += size
+                    frac = max(0.0, min(1.0, info.get("cur", 0) / size))
+                    pct_s = str(int(frac * 100))
+                    size_s = format_size(size)
+                else:
+                    frac = info.get("pct", 0) / 100.0
+                    pct_s = str(info.get("pct", 0))
+                    size_s = "unknown"
+                # mini 18-cell bar
+                mini_w = 18
+                filled = int(round(frac * mini_w))
+                bar = "█" * filled + "░" * (mini_w - filled)
+                lines.append(
+                    f"⬇ [bold]{label}[/] [dim]({size_s})[/]  "
+                    f"[#00e5ff]{bar}[/] [bold]{pct_s}%[/]"
+                )
+            if lines:
+                rows.update("\n".join(lines))
+            # overall bar = size-weighted average of known files
+            if total_known > 0:
+                try:
+                    bar = self.query_one("#dl-bar", GradientProgressBar)
+                    bar.set_fraction(max(0.0, min(1.0, total_cur / total_known)))
+                except Exception:
+                    pass
+
+        _ui_call(self, _apply)
 
     def set_body(self, body: str, total_size: int = -1) -> None:
         """Replace body text (e.g. scrape → download). Thread-safe."""
@@ -617,3 +735,277 @@ class ParseProgressModal(ModalScreen[Optional[str]]):
                 self.app.pop_screen()
         except Exception:
             pass
+
+
+# ---------------------------------------------------------------------------
+# Patch Description dialog — long-press on a patch (small centred + Confirm)
+# ---------------------------------------------------------------------------
+
+class PatchDescriptionDialog(ModalScreen[None]):
+    """Small centred modal showing a patch's full description + Confirm."""
+
+    BINDINGS = [
+        Binding("escape", "close", "Close", show=False),
+    ]
+
+    def __init__(
+        self,
+        patch_name: str,
+        description: str,
+        recommended: bool = False,
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.patch_name = patch_name
+        self.description = description or "No description available."
+        self.recommended = recommended
+
+    def compose(self) -> ComposeResult:
+        name_style = "bold #00ff7f"
+        badge = "  [RECOMMENDED]" if self.recommended else ""
+        with Vertical(classes="dialog-box small-dialog"):
+            yield Label("| Patch Details |", classes="dialog-title")
+            yield Label(f"[{name_style}]{self.patch_name}[/]{badge}", id="patch-dialog-name")
+            with VerticalScroll(id="patch-desc-scroll", classes="desc-scroll"):
+                yield Label(self.description, classes="dialog-message desc-text")
+            with ButtonBar(classes="dialog-buttons"):
+                yield Button("Confirm", id="btn-confirm", classes="btn-primary")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "btn-confirm":
+            self.dismiss(None)
+
+    def action_close(self) -> None:
+        self.dismiss(None)
+
+
+# ---------------------------------------------------------------------------
+# Changelog dialog — asset fetch release notes (Download / Back)
+# ---------------------------------------------------------------------------
+
+class ChangelogDialog(ModalScreen[Optional[bool]]):
+    """
+    Classic `| Changelog |` parity — shown before downloading assets.
+
+    Result: True → proceed with download, False/None → user pressed Back.
+    """
+
+    BINDINGS = [
+        Binding("escape", "back", "Back", show=False),
+    ]
+
+    def __init__(
+        self,
+        source_name: str,
+        patches_label: str,
+        size_bytes: int,
+        changelog: str,
+        confirm_label: str = "⬇ Download",
+        back_label: str = "🔙 Back",
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.source_name = source_name
+        self.patches_label = patches_label
+        self.size_bytes = size_bytes
+        self.changelog = (changelog or "").strip()
+        self.confirm_label = confirm_label
+        self.back_label = back_label
+
+    def _meta_text(self) -> str:
+        size_disp = format_size(self.size_bytes) if self.size_bytes > 0 else "Unavailable"
+        return (
+            f" SOURCE  : {self.source_name}\n"
+            f" Patches : {self.patches_label}\n"
+            f" Size    : {size_disp}\n"
+            f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        )
+
+    def compose(self) -> ComposeResult:
+        with Vertical(classes="dialog-box changelog-dialog"):
+            yield Label("| Changelog |", classes="dialog-title")
+            yield Label(self._meta_text(), classes="dialog-message changelog-meta")
+            with VerticalScroll(id="changelog-scroll", classes="desc-scroll"):
+                yield Label(
+                    self.changelog if self.changelog else "No changelog provided for this release.",
+                    classes="dialog-message desc-text",
+                )
+            with ButtonBar(classes="dialog-buttons"):
+                yield Button(self.confirm_label, id="btn-download", classes="btn-primary")
+                yield Button(self.back_label, id="btn-back", classes="btn-secondary")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "btn-download":
+            self.dismiss(True)
+        elif event.button.id == "btn-back":
+            self.dismiss(False)
+
+    def action_back(self) -> None:
+        self.dismiss(False)
+
+
+# ---------------------------------------------------------------------------
+# Toggle dialog — animated custom switches + Save (centred)
+# ---------------------------------------------------------------------------
+
+class ToggleSwitchDialog(ModalScreen[Optional[Dict[str, bool]]]):
+    """
+    Centred dialog listing options as animated CyberSwitch rows.
+
+    Result: dict {switch_key: new_value} on Save, None on Cancel.
+    """
+
+    BINDINGS = [
+        Binding("escape", "cancel", "Cancel", show=False),
+    ]
+
+    def __init__(
+        self,
+        title: str,
+        options: List[Tuple[str, str, str]],
+        initial: Dict[str, bool],
+        save_label: str = "💾 Save",
+        cancel_label: str = "Cancel",
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.dialog_title = title
+        self.options = options  # (key, label, description)
+        self.initial = initial
+        self.save_label = save_label
+        self.cancel_label = cancel_label
+
+    def compose(self) -> ComposeResult:
+        from src.tui.widgets.switch import CyberSwitch
+
+        with Vertical(classes="dialog-box small-dialog toggle-dialog"):
+            yield Label(self.dialog_title, classes="dialog-title")
+            with Vertical(id="toggle-scroll", classes="toggle-scroll"):
+                for key, label, desc in self.options:
+                    yield CyberSwitch(
+                        label,
+                        desc,
+                        switch_key=key,
+                        initial=bool(self.initial.get(key, False)),
+                    )
+            with ButtonBar(classes="dialog-buttons"):
+                yield Button(self.save_label, id="btn-save", classes="btn-primary")
+                yield Button(self.cancel_label, id="btn-cancel", classes="btn-secondary")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "btn-save":
+            from src.tui.widgets.switch import CyberSwitch
+
+            result = {
+                sw.switch_key: bool(sw.value)
+                for sw in self.query(CyberSwitch)
+                if sw.switch_key
+            }
+            self.dismiss(result)
+        elif event.button.id == "btn-cancel":
+            self.action_cancel()
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+
+# ---------------------------------------------------------------------------
+# Appearance & Themes dialog (centred)
+# ---------------------------------------------------------------------------
+
+class AppearanceDialog(ModalScreen[Optional[str]]):
+    """
+    Centred 'Appearance & Themes' dialog.
+
+    Result: "switch_theme" when Switch Theme pressed, None when closed.
+    """
+
+    BINDINGS = [
+        Binding("escape", "close", "Close", show=False),
+    ]
+
+    def __init__(
+        self,
+        theme_name: str,
+        theme_description: str = "",
+        theme_color: str = "#00ff7f",
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.theme_name = theme_name
+        self.theme_description = theme_description
+        self.theme_color = theme_color
+
+    def compose(self) -> ComposeResult:
+        from src.tui.widgets.gradient import GradientProgressBar
+
+        with Vertical(classes="dialog-box small-dialog appearance-dialog"):
+            yield Label("🎨 Appearance & Themes", classes="dialog-title")
+            yield Label(
+                f"Active Theme: [bold {self.theme_color}]{self.theme_name}[/]",
+                classes="dialog-message",
+            )
+            if self.theme_description:
+                yield Label(self.theme_description, classes="dialog-message desc-text")
+            yield GradientProgressBar(id="theme-palette", show_percentage=False)
+            with ButtonBar(classes="dialog-buttons"):
+                yield Button("🎨 Switch Theme", id="btn-switch", classes="btn-primary")
+                yield Button("Close", id="btn-close", classes="btn-secondary")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "btn-switch":
+            self.dismiss("switch_theme")
+        elif event.button.id == "btn-close":
+            self.action_close()
+
+    def action_close(self) -> None:
+        self.dismiss(None)
+
+
+# ---------------------------------------------------------------------------
+# Configuration Modules dialog (centred)
+# ---------------------------------------------------------------------------
+
+class ConfigModulesDialog(ModalScreen[Optional[str]]):
+    """
+    Centred 'Configuration Modules' dialog.
+
+    Result: the selected module key (e.g. "custom_sources") or None.
+    """
+
+    BINDINGS = [
+        Binding("escape", "close", "Close", show=False),
+    ]
+
+    MODULES: List[Tuple[str, str]] = [
+        ("custom_sources", "➕ Custom Sources"),
+        ("keystore", "🔑 Keystore Manager"),
+        ("token", "🎫 GitHub Token"),
+        ("apkmirror", "🌐 APKMirror Scraper Config"),
+        ("backup", "📦 Backup Stock Apps"),
+        ("auto_upgrade", "🔄 Auto Upgrade"),
+    ]
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def compose(self) -> ComposeResult:
+        with Vertical(classes="dialog-box small-dialog modules-dialog"):
+            yield Label("🔧 Configuration Modules", classes="dialog-title")
+            yield Label("Access advanced managers and tools:", classes="dialog-message")
+            with ButtonBar(classes="modules-list"):
+                for key, label in self.MODULES:
+                    yield Button(label, id=f"mod-{key}")
+            with ButtonBar(classes="dialog-buttons"):
+                yield Button("Close", id="btn-close", classes="btn-secondary")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        btn_id = event.button.id
+        if btn_id == "btn-close":
+            self.action_close()
+            return
+        if btn_id.startswith("mod-"):
+            self.dismiss(btn_id[len("mod-"):])
+
+    def action_close(self) -> None:
+        self.dismiss(None)

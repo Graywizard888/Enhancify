@@ -21,7 +21,9 @@ Screen {
 }
 
 #cyber-header {
-    dock: top;
+    /* The outer CyberHeader widget does the docking; this inner container
+       must stay in normal flow (a nested dock:top collapsed the header
+       to a single row). */
     height: auto;
     background: #161b22;
     border-bottom: solid #00ff7f;
@@ -156,6 +158,18 @@ ButtonBar Button {
     overflow-y: auto;
 }
 
+/* Cards that host a ListView fill the visible area so the 1fr list
+   inside gets real space (previously collapsed to 2px, hiding patches). */
+.list-card {
+    height: 100%;
+    min-height: 8;
+    overflow-y: auto;
+}
+
+.list-card ListView {
+    min-height: 10;
+}
+
 .card {
     background: #161b22;
     border: round #30363d;
@@ -246,7 +260,7 @@ ListView {
 }
 
 ListItem {
-    padding: 1;
+    padding: 0 1;
     background: #161b22;
     border-bottom: solid #21262d;
 }
@@ -1031,4 +1045,139 @@ App.theme-cyberpunk-neon .btn-danger {
     background: #3d0a24;
     color: #ff7ab8;
     border: tall #ff007f;
+}
+
+/* ====================================================
+   SMALL CENTRED DIALOGS (patch details / toggles / appearance / modules)
+   ==================================================== */
+.small-dialog {
+    width: 60%;
+    max-width: 56;
+    max-height: 85%;
+}
+
+.changelog-dialog {
+    width: 75%;
+    max-width: 78;
+    max-height: 88%;
+}
+
+.changelog-meta {
+    text-style: bold;
+    margin-bottom: 1;
+}
+
+.desc-scroll {
+    height: auto;
+    max-height: 14;
+    min-height: 4;
+    border: round #30363d;
+    background: #0d1117;
+    padding: 0 1;
+    margin-bottom: 1;
+    overflow-y: auto;
+}
+
+.desc-text {
+    color: #c9d1d9;
+}
+
+#patch-dialog-name {
+    margin-bottom: 1;
+}
+
+/* --- Toggle (animated switch) dialog --- */
+.toggle-scroll {
+    max-height: 16;
+    min-height: 4;
+    border: round #30363d;
+    background: #0d1117;
+    padding: 1 0;
+    margin-bottom: 1;
+    overflow-y: auto;
+}
+
+.toggle-scroll CyberSwitch {
+    margin-bottom: 0;
+}
+
+.toggle-scroll CyberSwitch:hover {
+    background: #131c26;
+}
+
+/* --- Modules dialog (stacked button list) --- */
+.modules-list {
+    layout: vertical;
+    align-horizontal: center;
+    margin-bottom: 1;
+}
+.modules-list Button {
+    width: 100%;
+    max-width: 40;
+    margin-bottom: 1;
+}
+
+/* --- Download batch rows (aria2c simultaneous mixedgauge) --- */
+.batch-rows {
+    margin-bottom: 0;
+}
+
+/* --- Appearance dialog palette bar --- */
+#theme-palette {
+    height: 1;
+}
+
+/* ====================================================
+   BOOT SCREEN (Enhancify Rebranded)
+   ==================================================== */
+#boot-screen {
+    height: 1fr;
+    width: 1fr;
+    align: center middle;
+    background: #0d1117;
+}
+
+#boot-art {
+    color: #00ff7f;
+    text-style: bold;
+    text-align: center;
+    margin-bottom: 1;
+}
+
+#boot-brand {
+    color: #00e5ff;
+    text-style: bold;
+    text-align: center;
+    margin-bottom: 0;
+}
+
+#boot-name {
+    color: #ffd700;
+    text-style: bold italic;
+    text-align: center;
+    margin-bottom: 2;
+}
+
+#boot-info {
+    color: #c9d1d9;
+    text-align: center;
+    margin-bottom: 1;
+}
+
+#boot-hint {
+    color: #8b949e;
+    text-align: center;
+    margin-top: 1;
+    text-style: dim;
+}
+
+#boot-bar {
+    width: 44;
+    max-width: 90%;
+}
+
+/* ====================================================
+   CYBER STATUS BAR (main menu top)
+   ==================================================== */
+.status-bar-item {
 }

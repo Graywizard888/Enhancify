@@ -44,7 +44,7 @@ class OptionsEditScreen(Screen):
         yield CyberHeader(mode_label=mode_label, online_status=net_status)
 
         with ScrollableContainer(classes="container-box"):
-            with Vertical(classes="card"):
+            with Vertical(classes="card list-card"):
                 yield Label(f"⚙️ Configure Patch Options for [bold #00ff7f]{app_name}[/]", classes="card-title")
                 yield Label("Select an option below to modify its value, or proceed to start patching:", classes="card-desc")
 

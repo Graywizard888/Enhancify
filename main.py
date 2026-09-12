@@ -44,6 +44,9 @@ async def run_smoke_tests() -> bool:
     from rich.console import Console
     from src.tui.app import EnhancifyApp
 
+    # Skip the 'Enhancify Rebranded' boot splash during smoke tests.
+    os.environ.setdefault("ENHANCIFY_BOOT_SECONDS", "0.05")
+
     console = Console()
     console.print("\n[bold #00ff7f]🚀 Starting Enhancify Android Display Smoke Test Suite...[/]\n")
 

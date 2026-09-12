@@ -7,11 +7,13 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from textual.app import App, ComposeResult
+from textual.screen import Screen
 
 from src.config import config
 from src.environment import env
 from src.theme import THEME_MAP, THEMES, get_current_theme
 from src.tui.screens.app_select import AppSelectScreen
+from src.tui.screens.boot_screen import BootScreen
 from src.tui.screens.bundle_patcher import BundlePatcherScreen
 from src.tui.screens.custom_sources import CustomSourcesScreen
 from src.tui.screens.dependency_select import DependencySelectScreen
@@ -43,6 +45,7 @@ class EnhancifyApp(App):
     CSS_PATH = TCSS_PATH
 
     SCREENS = {
+        "boot_screen": BootScreen,
         "main_menu_screen": MainMenuScreen,
         "source_select_screen": SourceSelectScreen,
         "app_select_screen": AppSelectScreen,
@@ -64,6 +67,20 @@ class EnhancifyApp(App):
         "unmount_screen": UnmountScreen,
     }
 
+    def get_screen(self, screen, screen_class=None):
+        """Always create a FRESH screen instance for named screens.
+
+        Textual caches the first instance created from ``App.SCREENS`` and
+        reuses it on later ``push_screen("name")`` calls; a screen whose pump
+        was closed by an earlier pop never mounts again (on_mount never fires),
+        so e.g. the asset-fetch flow would silently never start a second time.
+        """
+        if isinstance(screen, str) and screen in self.SCREENS:
+            screen_cls = self.SCREENS[screen]
+            if isinstance(screen_cls, type) and issubclass(screen_cls, Screen):
+                return screen_cls()
+        return super().get_screen(screen, screen_class)
+
     def __init__(self, force_root: Optional[bool] = None, force_rish: Optional[bool] = None, **kwargs):
         super().__init__(**kwargs)
         self.force_root = force_root
@@ -72,9 +89,19 @@ class EnhancifyApp(App):
         self.multi_sources: List[str] = [config.get("SOURCE", "Anddea")]
 
     def on_mount(self) -> None:
-        """Apply active theme and start on main menu."""
+        """Apply active theme and start with the 'Enhancify Rebranded' boot screen."""
         cur_theme = get_current_theme()
         self.apply_theme(cur_theme.id)
+        self.push_screen("boot_screen")
+
+    def on_boot_complete(self) -> None:
+        """Called by BootScreen when the splash finishes / is skipped."""
+        try:
+            top = self.screen_stack[-1] if self.screen_stack else None
+            if isinstance(top, BootScreen):
+                self.pop_screen()
+        except Exception:
+            pass
         self.push_screen("main_menu_screen")
 
     def apply_theme(self, theme_id: str) -> None:

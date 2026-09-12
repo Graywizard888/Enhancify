@@ -297,12 +297,30 @@ class TestTuiScreens(unittest.TestCase):
         self.assertNotIn("gmscore", actions)
 
     def test_mount_dependency_flow_screens(self):
+        async def _wait_main_menu(app, pilot):
+            """Wait for the 'Enhancify Rebranded' boot screen to auto-advance."""
+            from src.tui.screens.main_menu import MainMenuScreen
+
+            for _ in range(100):
+                if isinstance(app.screen, MainMenuScreen):
+                    # Let the main menu finish composing/mounting its widgets.
+                    await pilot.pause(0.15)
+                    return
+                await pilot.pause(0.02)
+            raise AssertionError("Main menu did not appear after boot screen")
+
         async def _run():
+            import os
+
             from src.tui.app import EnhancifyApp
+
+            # Keep the boot splash snappy in tests.
+            os.environ.setdefault("ENHANCIFY_BOOT_SECONDS", "0.01")
 
             app = EnhancifyApp()
             async with app.run_test(size=(100, 30)) as pilot:
                 assert app.screen is not None
+                await _wait_main_menu(app, pilot)
 
                 # Main menu should expose Fetch Dependency button
                 btn = app.screen.query_one("#btn-dependency")

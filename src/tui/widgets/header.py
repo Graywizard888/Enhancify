@@ -25,6 +25,11 @@ class CyberHeader(Widget):
         border-bottom: solid #00ff7f;
         padding: 0 1;
     }
+    #cyber-header {
+        /* Vertical defaults to height:1fr, which fights the dock:top
+           parent's auto height — pin it to its content. */
+        height: auto;
+    }
     """
 
     def __init__(self, mode_label: str = "Non-privilege Mode", online_status: str = "Online", **kwargs):
@@ -42,7 +47,16 @@ class CyberHeader(Widget):
             arch = env.get_arch()
             java_ver, _ = env.detect_java_version()
 
-            with ButtonBar(id="status-bar-badges"):
+            # Badge Labels are narrow — keep them on one line at least down
+            # to phone widths (the default 78-col threshold would stack all
+            # four vertically and eat the whole top of a Termux screen).
+            # On ultra-narrow portrait phones they hide entirely (the mode /
+            # status / arch info is duplicated by the main-menu status bar).
+            with ButtonBar(
+                id="status-bar-badges",
+                stack_threshold=40,
+                hide_when_stacked=True,
+            ):
                 # Privilege badge
                 mode_color = "#00ff7f" if "Root" in self.mode_label else "#00e5ff" if "Rish" in self.mode_label else "#d2a8ff"
                 yield Label(f"⚙️ {self.mode_label}", classes="badge badge-green")

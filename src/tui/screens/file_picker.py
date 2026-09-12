@@ -54,7 +54,7 @@ class FilePickerScreen(Screen[Optional[Path]]):
         yield CyberHeader(mode_label=mode_label, online_status=net_status)
 
         with ScrollableContainer(classes="container-box"):
-            with Vertical(classes="card"):
+            with Vertical(classes="card list-card"):
                 yield Label("📂 Select File from Storage", classes="card-title")
                 yield Label(f"Current Path: [bold #00e5ff]{self.current_dir}[/]", id="path-label", classes="card-desc")
 

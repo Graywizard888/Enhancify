@@ -15,7 +15,7 @@ import threading
 import time
 from enum import Enum
 from pathlib import Path
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, Dict, List, Optional, Tuple, Union
 
 import requests
 
@@ -100,6 +100,170 @@ def download_file_ex(
     )
 
 
+def _aria2_command(
+    url: str,
+    output_path: Path,
+    headers: Optional[dict] = None,
+) -> List[str]:
+    """Build an accelerated aria2c command (8-way split — classic parity)."""
+    cmd = [
+        "aria2c",
+        "--console-log-level=warn",
+        "--summary-interval=1",
+        "--download-result=hide",
+        "--no-conf",
+        f"--dir={output_path.parent}",
+        f"--out={output_path.name}",
+        "--split=8",
+        "--min-split-size=5M",
+        "--max-connection-per-server=8",
+        "--file-allocation=none",
+        "--disk-cache=50M",
+        "--enable-http-pipelining=true",
+        "--retry-wait=1",
+        "--max-tries=3",
+        "--auto-file-renaming=false",
+        "--allow-overwrite=true",
+        url,
+    ]
+    if headers:
+        for k, v in headers.items():
+            cmd.append(f"--header={k}: {v}")
+    return cmd
+
+
+def _cleanup_partial(output_path: Path) -> None:
+    """Remove a partial download + aria2c temp files."""
+    try:
+        output_path.unlink(missing_ok=True)
+        for p in output_path.parent.glob(output_path.name + ".*"):
+            p.unlink(missing_ok=True)
+    except Exception:
+        pass
+
+
+def download_files_parallel(
+    jobs: List[Tuple[str, Path, int]],
+    labels: List[str],
+    progress_callback: Optional[Callable[[str, int, int, str], None]] = None,
+    cancel_event: Optional[threading.Event] = None,
+) -> Dict[str, DownloadResult]:
+    """
+    Download several files at the SAME time with separate accelerated aria2c
+    processes (classic `downloadBatchAria2c` parity — each file gets its own
+    8-part split, all running concurrently).
+
+    jobs:   [(url, output_path, expected_size), ...]
+    labels: one label per job (shown in the UI mixed-gauge rows)
+    progress_callback(label, current, total, pct)
+
+    Returns {label: DownloadResult}. All CANCELLED if the user cancelled.
+    """
+    if len(jobs) != len(labels):
+        raise ValueError("jobs and labels must have the same length")
+    if not jobs:
+        return {}
+    if _is_cancelled(cancel_event):
+        return {label: DownloadResult.CANCELLED for label in labels}
+
+    results: Dict[str, DownloadResult] = {label: DownloadResult.ERROR for label in labels}
+    procs: List[Tuple[subprocess.Popen, str, str, Path, int]] = []
+    done: Dict[str, bool] = {label: False for label in labels}
+
+    for (url, path, size), label in zip(jobs, labels):
+        if _is_cancelled(cancel_event):
+            break
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            proc = subprocess.Popen(
+                _aria2_command(url, path),
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
+        except Exception:
+            continue
+        procs.append((proc, label, url, path, size))
+
+    def _reader(label: str, proc: subprocess.Popen, url: str, path: Path, size: int) -> None:
+        try:
+            if proc.stdout:
+                for line in proc.stdout:
+                    if _is_cancelled(cancel_event):
+                        break
+                    if "%" in line:
+                        m = re.search(r"\((\d{1,3})%\)", line) or re.search(r"(\d{1,3})%", line)
+                        if m and progress_callback:
+                            pct = int(m.group(1))
+                            cur = int(size * (pct / 100)) if size > 0 else 0
+                            progress_callback(label, cur, size, f"{pct}%")
+        except Exception:
+            pass
+        finally:
+            try:
+                if proc.stdout:
+                    proc.stdout.close()
+            except Exception:
+                pass
+            done[label] = True
+
+    threads = [
+        threading.Thread(
+            target=_reader,
+            args=(label, proc, url, path, size),
+            daemon=True,
+        )
+        for (proc, label, url, path, size) in procs
+    ]
+    for t in threads:
+        t.start()
+
+    # Wait until every aria2c output is fully drained or cancel is requested.
+    while not all(done.values()):
+        if _is_cancelled(cancel_event):
+            for proc, _label, _url, _path, _size in procs:
+                try:
+                    proc.terminate()
+                    try:
+                        proc.wait(timeout=2)
+                    except subprocess.TimeoutExpired:
+                        proc.kill()
+                except Exception:
+                    pass
+            break
+        time.sleep(0.15)
+
+    for t in threads:
+        t.join(timeout=5)
+
+    for proc, label, _url, path, size in procs:
+        if _is_cancelled(cancel_event):
+            _cleanup_partial(path)
+            results[label] = DownloadResult.CANCELLED
+            continue
+        try:
+            proc.wait(timeout=30)
+        except subprocess.TimeoutExpired:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+            results[label] = DownloadResult.ERROR
+            continue
+        if (
+            proc.returncode == 0
+            and path.exists()
+            and (size <= 0 or path.stat().st_size == size)
+        ):
+            results[label] = DownloadResult.OK
+        else:
+            _cleanup_partial(path)
+            results[label] = DownloadResult.ERROR
+
+    return results
+
+
 def _download_aria2(
     url: str,
     output_path: Path,
@@ -109,29 +273,7 @@ def _download_aria2(
     cancel_event: Optional[threading.Event],
 ) -> DownloadResult:
     try:
-        cmd = [
-            "aria2c",
-            "--console-log-level=warn",
-            "--summary-interval=1",
-            "--download-result=hide",
-            "--no-conf",
-            f"--dir={output_path.parent}",
-            f"--out={output_path.name}",
-            "--split=8",
-            "--min-split-size=5M",
-            "--max-connection-per-server=8",
-            "--file-allocation=none",
-            "--disk-cache=50M",
-            "--enable-http-pipelining=true",
-            "--retry-wait=1",
-            "--max-tries=3",
-            "--auto-file-renaming=false",
-            "--allow-overwrite=true",
-            url,
-        ]
-        if headers:
-            for k, v in headers.items():
-                cmd.append(f"--header={k}: {v}")
+        cmd = _aria2_command(url, output_path, headers)
 
         proc = subprocess.Popen(
             cmd,

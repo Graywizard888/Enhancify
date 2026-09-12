@@ -74,13 +74,17 @@ def get_terminal_cols(default: int = 80) -> int:
     return default
 
 
-def estimate_row_width(labels: List[str]) -> int:
-    """Estimate horizontal width needed for a row of buttons."""
+def estimate_row_width(labels: List[str], chrome: int = _BUTTON_CHROME + 2) -> int:
+    """Estimate horizontal width needed for a row of buttons / labels.
+
+    ``chrome`` is the per-item overhead (borders/padding/margins). Buttons
+    need ~9 cells of chrome; plain Labels only ~3 (margin + emoji slack).
+    """
     total = 0
     for label in labels:
-        # Button label width + chrome. Wide chars (emoji) count ~2 cells;
-        # len() undercounts them, so add a small per-button safety margin.
-        total += len(label) + _BUTTON_CHROME + 2
+        # Item text width + chrome. Wide chars (emoji) count ~2 cells;
+        # len() undercounts them, so the per-item margin covers that slack.
+        total += len(label) + chrome
     return total
 
 
@@ -122,10 +126,12 @@ class ButtonBar(Container):
         self,
         *args,
         stack_threshold: int = STACK_THRESHOLD_COLS,
+        hide_when_stacked: bool = False,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.stack_threshold = stack_threshold
+        self.hide_when_stacked = hide_when_stacked
         self.add_class("btn-bar")
 
     def on_mount(self) -> None:
@@ -185,25 +191,37 @@ class ButtonBar(Container):
             # Card/dialog chrome: container padding + borders.
             usable = max(10, cols - 2)
             labels: List[str] = []
+            chrome = _BUTTON_CHROME + 2
             try:
                 labels = [str(b.label) for b in self.query(Button)]
                 if not labels:
-                    # Header badge rows contain Labels instead of Buttons.
+                    # Header badge rows contain Labels instead of Buttons —
+                    # no button borders, so far less chrome per item.
                     from textual.widgets import Label as _Label
 
                     labels = [str(b.content) for b in self.query(_Label)]
+                    chrome = 3
             except Exception:
                 labels = []
-            needed = estimate_row_width(labels) if labels else 0
+            needed = estimate_row_width(labels, chrome) if labels else 0
 
             should_stack = (
                 cols <= self.stack_threshold
                 or (needed > 0 and needed > usable)
             )
             if should_stack:
-                self.add_class("stacked")
+                if self.hide_when_stacked:
+                    # Ultra-narrow (phone portrait): a stacked row of badges
+                    # would eat the whole top of the screen — hide the bar
+                    # instead (the info lives on in the status bar).
+                    self.remove_class("stacked")
+                    self.display = False
+                else:
+                    self.add_class("stacked")
+                    self.display = True
             else:
                 self.remove_class("stacked")
+                self.display = True
         except Exception:
             pass
 

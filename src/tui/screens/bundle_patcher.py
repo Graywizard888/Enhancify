@@ -38,7 +38,7 @@ class BundlePatcherScreen(Screen):
         yield CyberHeader(mode_label=mode_label, online_status=net_status)
 
         with ScrollableContainer(classes="container-box"):
-            with Vertical(classes="card"):
+            with Vertical(classes="card list-card"):
                 yield Label("📦 Bundle Patcher (Experimental)", classes="card-title")
                 yield Label("Import standalone patch bundles from external URLs or JSON files:", classes="card-desc")
 
