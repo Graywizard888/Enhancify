@@ -253,6 +253,9 @@ class AppInstaller:
 
             rish_script = self.system_dir / "rish-install.sh"
             if rish_script.exists():
+                install_error_file = self.storage_dir / "install_error.txt"
+                install_error_file.unlink(missing_ok=True)
+
                 cmd = ["bash", str(rish_script), pkg_name, app_name, exported_name, str(self.storage_dir), "new"]
                 code, out, err = run_command(cmd, timeout=60)
                 if code == 0:
@@ -265,6 +268,11 @@ class AppInstaller:
                         launch_cmd = f"pm resolve-activity --brief {pkg_name} | tail -n 1 | xargs am start -n"
                         subprocess.run(["rish", "-c", launch_cmd], capture_output=True)
                     return True, f"{app_name} installed successfully via Rish with Dex Optimization!"
+
+                if install_error_file.exists():
+                    reason = install_error_file.read_text().strip()
+                    if reason:
+                        return False, f"Rish installation failed: {reason}"
                 return False, f"Rish installation failed: {err or out}"
             return False, "rish-install.sh script not found!"
 
