@@ -49,6 +49,160 @@ class AssetReleaseInfo:
     extra_assets: Dict[str, Tuple[str, int]] = field(default_factory=dict)
 
 
+# ---------------------------------------------------------------------------
+# CLI `list-patches --with-options` text parsing (source-agnostic).
+#
+# The CLI indents each option's fields with one tab under "Options:", and
+# (only for options with presets) indents each "Possible values:" choice
+# with a second tab, formatted as "<value> (<Label>)". Both the official
+# ReVanced CLI ("Name:"/no "Key:" line) and other CLI forks used by
+# aggregated sources ("Title:"+"Key:") are handled by the same parser below
+# since it looks for whichever recognized field labels are actually
+# present per option rather than branching on source name -- so any
+# current or future source that funnels through this CLI text pipeline
+# picks up option presets automatically instead of needing its own fix.
+# ---------------------------------------------------------------------------
+
+_CLI_OPTION_FIELD_NAMES = (
+    "Title", "Name", "Description", "Required", "Key", "Default",
+    "Possible values", "Type",
+)
+
+
+def _normalize_cli_option_type(raw_type: str) -> str:
+    t = str(raw_type or "")
+    if "List" in t:
+        return "StringArray"
+    if "Boolean" in t:
+        return "Boolean"
+    if any(x in t for x in ("Long", "Int", "Float", "Number")):
+        return "Number"
+    return "String"
+
+
+def _coerce_cli_default(clean_type: str, default_raw: Optional[str]) -> Any:
+    if default_raw is None or default_raw == "":
+        return None
+    if clean_type == "Boolean":
+        return default_raw.strip().lower() == "true"
+    if clean_type == "Number":
+        try:
+            return float(default_raw) if "." in default_raw else int(default_raw)
+        except ValueError:
+            return default_raw
+    if clean_type == "StringArray":
+        inner = default_raw.strip().strip("[]")
+        return [x.strip().strip('"') for x in inner.split(",") if x.strip()]
+    return default_raw
+
+
+def _extract_cli_options_section(block: str) -> str:
+    """Slice out the "Options:" sub-section from a raw patch block, keeping
+    original tab indentation (needed to tell option fields apart from
+    "Possible values" choices, which are indented one level deeper)."""
+    lines = block.split("\n")
+    start = None
+    for i, l in enumerate(lines):
+        if l.rstrip("\r") == "Options:":
+            start = i + 1
+            break
+    if start is None:
+        return ""
+    section: List[str] = []
+    for l in lines[start:]:
+        l = l.rstrip("\r")
+        if l == "" or l.startswith("\t"):
+            section.append(l)
+        else:
+            break
+    return "\n".join(section)
+
+
+def _split_cli_option_chunks(options_text: str) -> List[str]:
+    """Split an options section into per-option chunks, each starting at
+    its "\tTitle:" (aggregated-source CLIs) or "\tName:" (official ReVanced
+    CLI) line."""
+    if not options_text:
+        return []
+    indices = [m.start() for m in re.finditer(r"^\t(?:Title|Name):", options_text, re.MULTILINE)]
+    if not indices:
+        return []
+    indices.append(len(options_text))
+    return [options_text[indices[i]:indices[i + 1]] for i in range(len(indices) - 1)]
+
+
+def _parse_cli_option_chunk(chunk: str, patch_name: str) -> Dict[str, Any]:
+    """Parse one option's raw text chunk into the same option schema used
+    by the direct-JSON-API pipeline (title/key/description/required/
+    default/type/values), so both pipelines feed identical downstream
+    code (patches.py, options_edit.py, SelectDialog)."""
+    fields: Dict[str, List[str]] = {}
+    current: Optional[str] = None
+    for line in chunk.split("\n"):
+        matched = False
+        if line.startswith("\t"):
+            rest = line[1:]
+            for fname in _CLI_OPTION_FIELD_NAMES:
+                prefix = fname + ":"
+                if rest.startswith(prefix):
+                    value = rest[len(prefix):]
+                    if value.startswith(" "):
+                        value = value[1:]
+                    fields[fname] = [value]
+                    current = fname
+                    matched = True
+                    break
+        if not matched and current is not None:
+            fields[current].append(line[1:] if line.startswith("\t") else line)
+
+    def joined(name: str) -> str:
+        return "\n".join(fields.get(name, [])).strip("\n")
+
+    title = joined("Title") or joined("Name")
+    key = joined("Key") or title.replace(" ", "")
+    description = joined("Description").strip() or "No description available"
+    required = joined("Required").strip().lower() == "true"
+    default_raw = fields.get("Default", [None])[0]
+    clean_type = _normalize_cli_option_type(joined("Type"))
+    default_val = _coerce_cli_default(clean_type, default_raw)
+
+    values: Dict[str, str] = {}
+    for raw_line in fields.get("Possible values", [])[1:]:
+        choice = raw_line.strip()
+        if not choice:
+            continue
+        # Split on the FIRST "(" (value) / LAST ")" (label) so labels that
+        # themselves contain parens -- e.g. "@color/x (Material You (Neutral))"
+        # -- still parse correctly instead of falling through to the
+        # raw-line fallback below.
+        m = re.match(r"^(.*?)\((.*)\)$", choice)
+        if m:
+            values[m.group(2)] = m.group(1).strip()
+        else:
+            values[choice] = choice
+
+    return {
+        "patchName": patch_name,
+        "key": key,
+        "title": title or key,
+        "description": description,
+        "required": required,
+        "default": default_val,
+        "type": clean_type,
+        "values": values,
+    }
+
+
+def parse_cli_options_block(block: str, patch_name: str) -> List[Dict[str, Any]]:
+    """Parse all of a patch's options from its raw `list-patches` text
+    block. Returns [] if the patch declares no options."""
+    section = _extract_cli_options_section(block)
+    return [
+        _parse_cli_option_chunk(chunk, patch_name)
+        for chunk in _split_cli_option_chunks(section)
+    ]
+
+
 class AssetsManager:
     """Manages CLI jars, Patches bundles, and patches metadata."""
 
@@ -738,7 +892,6 @@ class AssetsManager:
             desc = "No description available"
             enabled = True
             comp_pkgs = []
-            options = []
 
             for line in lines:
                 if line.startswith("Name:"):
@@ -754,6 +907,8 @@ class AssetsManager:
 
             if not patch_name:
                 continue
+
+            options = parse_cli_options_block(block, patch_name)
 
             if not comp_pkgs:
                 comp_pkgs = [None]
@@ -775,6 +930,8 @@ class AssetsManager:
                     if patch_name not in entry["patches"]["optional"]:
                         entry["patches"]["optional"].append(patch_name)
                 entry["descriptions"][patch_name] = desc
+                if options:
+                    entry["options"].extend(options)
 
         result_list = list(packages_map.values())
         target_file.parent.mkdir(parents=True, exist_ok=True)
