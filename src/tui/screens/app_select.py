@@ -21,6 +21,7 @@ from textual.screen import Screen
 from textual.widgets import Button, Footer, Input, Label, ListItem, ListView
 
 from src.antisplit import antisplit_mgr
+from src.apkmirror import apkmirror_scraper
 from src.assets import AssetReleaseInfo, assets_mgr
 from src.config import config
 from src.environment import env
@@ -36,6 +37,7 @@ from src.tui.widgets.header import CyberHeader
 from src.tui.widgets.button_bar import ButtonBar
 from src.utils import DownloadResult
 
+import json
 import shutil
 
 
@@ -315,7 +317,12 @@ class AppSelectScreen(Screen):
                         elif "spotify" in pl:
                             clean_name = "Spotify"
 
-                        apkmirror_name = clean_name.lower().replace(" ", "-")
+                        # Fallback slug only — APKMirror's real category slug
+                        # (fetched below) rarely matches the package name, e.g.
+                        # com.twitter.android -> "twitter" not "twitter-/-x",
+                        # com.instagram.android -> "instagram-instagram" not
+                        # "instagram". Guessing it breaks the version fetch.
+                        apkmirror_name = clean_name.lower().replace(" / ", "-").replace(" ", "-")
                         apps.append(
                             {
                                 "pkgName": pname,
@@ -324,6 +331,10 @@ class AppSelectScreen(Screen):
                                 "versions": entry.get("versions", []),
                             }
                         )
+
+                parse_modal.update_message("Resolving real app names from APKMirror...")
+                self._resolve_apkmirror_names(apps, rel)
+
                 self.apps_data = sorted(apps, key=lambda x: x["appName"])
         except Exception as e:
             self.app.call_from_thread(
@@ -333,6 +344,46 @@ class AppSelectScreen(Screen):
         finally:
             if not cancelled:
                 self.app.call_from_thread(self.filter_and_display_apps)
+
+    def _resolve_apkmirror_names(self, apps: List[Dict[str, Any]], rel: AssetReleaseInfo) -> None:
+        """Overlay each app's real APKMirror name + uploads-page category slug
+        (looked up via the app_exists API, cached to Apps-<version>.json like
+        the classic bash flow) onto the heuristic guess set above. Falls back
+        to the guess when APKMirror doesn't recognize a package or the
+        lookup fails (e.g. offline), so the app list still works without
+        network — just with a slug that may not resolve on the version screen.
+        """
+        src_dir = assets_mgr.assets_dir / self.active_source
+        cache_file = src_dir / f"Apps-{rel.patches_version}.json"
+
+        resolved: Dict[str, Dict[str, str]] = {}
+        if cache_file.exists():
+            try:
+                cached = json.loads(cache_file.read_text(encoding="utf-8"))
+                if isinstance(cached, list):
+                    resolved = {a["pkgName"]: a for a in cached if a.get("pkgName")}
+            except Exception:
+                resolved = {}
+
+        missing = [a["pkgName"] for a in apps if a["pkgName"] not in resolved]
+        if missing:
+            fetched = apkmirror_scraper.resolve_apps_info(missing)
+            for pkg, info in fetched.items():
+                resolved[pkg] = {"pkgName": pkg, **info}
+            if fetched:
+                try:
+                    src_dir.mkdir(parents=True, exist_ok=True)
+                    cache_file.write_text(
+                        json.dumps(list(resolved.values()), indent=2), encoding="utf-8"
+                    )
+                except Exception:
+                    pass
+
+        for app in apps:
+            info = resolved.get(app["pkgName"])
+            if info:
+                app["appName"] = info.get("appName", app["appName"])
+                app["apkmirrorAppName"] = info.get("apkmirrorAppName", app["apkmirrorAppName"])
 
     # ------------------------------------------------------------- app list
 

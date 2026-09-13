@@ -26,6 +26,8 @@ from src.utils import DownloadResult, download_file, download_file_ex
 
 USER_AGENT = "APKUpdater-3.0.3"
 APKMIRROR_BASE = "https://www.apkmirror.com"
+APP_EXISTS_URL = f"{APKMIRROR_BASE}/wp-json/apkm/v1/app_exists/"
+APP_EXISTS_AUTH = "Basic YXBpLXRvb2xib3gtZm9yLWdvb2dsZS1wbGF5OkNiVVcgQVVMZyBNRVJXIHU4M3IgS0s0SCBEbmJL"
 
 
 @dataclass
@@ -92,6 +94,49 @@ class APKMirrorScraper:
         """Clear cache for a given app."""
         cache_file = self._get_cache_file(app_name)
         cache_file.unlink(missing_ok=True)
+
+    # --- App resolution (real name + category slug from APKMirror) ---
+
+    def resolve_apps_info(self, pkg_names: List[str], batch_size: int = 100) -> Dict[str, Dict[str, str]]:
+        """Resolve the real APKMirror app name + uploads-page category slug for
+        each package via the app_exists API (the same endpoint the classic
+        bash flow used). APKMirror's slugs can't be guessed from the package
+        name (e.g. com.twitter.android -> "twitter", com.instagram.android ->
+        "instagram-instagram"), so guessing breaks the version scrape/download
+        step for any package whose slug doesn't match its name.
+        """
+        result: Dict[str, Dict[str, str]] = {}
+        headers = {
+            "User-Agent": USER_AGENT,
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Authorization": APP_EXISTS_AUTH,
+        }
+        pkg_names = [p for p in pkg_names if p]
+
+        for i in range(0, len(pkg_names), batch_size):
+            batch = pkg_names[i:i + batch_size]
+            try:
+                r = requests.post(
+                    APP_EXISTS_URL, headers=headers, json={"pnames": batch}, timeout=15
+                )
+                if r.status_code != 200:
+                    continue
+                for entry in r.json().get("data", []):
+                    if not entry.get("exists"):
+                        continue
+                    pkg = entry.get("pname")
+                    app = entry.get("app") or {}
+                    link = app.get("link", "")
+                    slug_match = re.search(r"/([^/]+)/$", link)
+                    slug = slug_match.group(1) if slug_match else None
+                    name = (app.get("name") or "").strip()
+                    if pkg and slug and name:
+                        result[pkg] = {"appName": name, "apkmirrorAppName": slug}
+            except Exception:
+                continue
+
+        return result
 
     # --- Scraping ---
 
