@@ -302,7 +302,13 @@ class AppSelectScreen(Screen):
                 for entry in patches_json:
                     pname = entry.get("pkgName")
                     if pname:
-                        clean_name = pname.split(".")[-1].capitalize()
+                        parts = pname.split(".")
+                        clean_name = parts[-1].capitalize()
+                        # Generic last segments (very common Play Store suffix,
+                        # e.g. ch.protonmail.android) collapse many unrelated
+                        # apps to the same useless name — fall back one segment.
+                        if clean_name.lower() in ("android", "app", "apps", "mobile") and len(parts) >= 2:
+                            clean_name = parts[-2].capitalize()
                         pl = pname.lower()
                         if "youtube" in pl:
                             clean_name = (
