@@ -15,9 +15,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
+import requests
+
 from src.config import config
 from src.environment import env
-from src.utils import run_command
+from src.utils import DownloadResult, download_file_ex, run_command
+
+APKEDITOR_RELEASES_API = "https://api.github.com/repos/REAndroid/APKEditor/releases/latest"
+AAPT2_RELEASES_API = "https://api.github.com/repos/Graywizard888/Custom-Enhancify-aapt2-binary/releases/latest"
 
 
 LANGUAGE_MAP = {
@@ -51,6 +56,54 @@ class AntiSplitManager:
         self.bin_dir = self.workspace_dir / "bin"
         self.aapt2_bin = self.bin_dir / "aapt2"
         self.apkeditor_jar = self.bin_dir / "APKEditor.jar"
+
+    def ensure_apkeditor(self) -> bool:
+        """Download APKEditor.jar from REAndroid/APKEditor releases if missing.
+
+        Ported from the bash `enhancify` first-run setup, which the Python
+        TUI rewrite never carried over — the merge step always failed
+        silently because bin/APKEditor.jar simply didn't exist.
+        """
+        if self.apkeditor_jar.exists():
+            return True
+        try:
+            r = requests.get(APKEDITOR_RELEASES_API, timeout=15)
+            r.raise_for_status()
+            assets = r.json().get("assets", [])
+            if not assets:
+                return False
+            asset = assets[0]
+            self.bin_dir.mkdir(parents=True, exist_ok=True)
+            result = download_file_ex(
+                asset["browser_download_url"], self.apkeditor_jar, asset.get("size", 0)
+            )
+            return result == DownloadResult.OK and self.apkeditor_jar.exists()
+        except Exception:
+            return False
+
+    def ensure_aapt2(self) -> bool:
+        """Download the arch-matched aapt2 binary if missing, mirroring the
+        bash setup's Custom-Enhancify-aapt2-binary fetch."""
+        if self.aapt2_bin.exists():
+            return True
+        try:
+            arch = env.get_arch()
+            r = requests.get(AAPT2_RELEASES_API, timeout=15)
+            r.raise_for_status()
+            assets = r.json().get("assets", [])
+            match = next((a for a in assets if arch in a.get("name", "")), None)
+            if not match:
+                return False
+            self.bin_dir.mkdir(parents=True, exist_ok=True)
+            result = download_file_ex(
+                match["browser_download_url"], self.aapt2_bin, match.get("size", 0)
+            )
+            if result == DownloadResult.OK and self.aapt2_bin.exists():
+                self.aapt2_bin.chmod(0o755)
+                return True
+            return False
+        except Exception:
+            return False
 
     def get_closest_dpi_bucket(self) -> str:
         """Find the closest DPI bucket to the device density."""
@@ -147,7 +200,7 @@ class AntiSplitManager:
 
     def antisplit_apkm(self, input_apkm: Path, output_apk: Path) -> bool:
         """Unpack APKM bundle and merge using APKEditor.jar."""
-        if not self.apkeditor_jar.exists() or not shutil.which("java"):
+        if not self.ensure_apkeditor() or not shutil.which("java"):
             return False
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -169,7 +222,7 @@ class AntiSplitManager:
 
     def antisplit_apks(self, input_apks: Path, output_apk: Path) -> bool:
         """Unpack APKS bundle and merge using APKEditor.jar."""
-        if not self.apkeditor_jar.exists() or not shutil.which("java"):
+        if not self.ensure_apkeditor() or not shutil.which("java"):
             return False
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -196,7 +249,7 @@ class AntiSplitManager:
         selected_languages: Optional[List[str]] = None,
     ) -> bool:
         """Unpack XAPK bundle, copy splits for arch/dpi/languages, and merge."""
-        if not self.apkeditor_jar.exists() or not shutil.which("java"):
+        if not self.ensure_apkeditor() or not shutil.which("java"):
             return False
 
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -254,7 +307,7 @@ class AntiSplitManager:
 
     def optimize_native_libs(self, apk_path: Path, progress_callback: Optional[Callable[[str], None]] = None) -> bool:
         """Strip unused native CPU architecture libraries from APK."""
-        if not self.aapt2_bin.exists() or not apk_path.exists():
+        if not self.ensure_aapt2() or not apk_path.exists():
             return False
 
         arch = env.get_arch()

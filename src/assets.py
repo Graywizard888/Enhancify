@@ -558,7 +558,7 @@ class AssetsManager:
 
             for p in patches_list:
                 name = p.get("name", "")
-                desc = p.get("description", "No description available").replace("\n", " ").strip()
+                desc = (p.get("description") or "No description available").replace("\n", " ").strip()
                 use = bool(p.get("use", p.get("default", True)))
                 comp_pkgs = p.get("compatiblePackages", [])
 
