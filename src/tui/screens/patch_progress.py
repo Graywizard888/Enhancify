@@ -90,6 +90,10 @@ class PatchProgressScreen(Screen):
         output_apk = assets_mgr.workspace_dir / "apps" / app_name / f"{app_ver}-{source_name}.apk"
         self.output_apk = output_apk
 
+        if app_info.get("skip_patch") and output_apk.exists():
+            self._show_reused_patch_state()
+            return
+
         # Find CLI and Patches
         cli_jars = list(assets_mgr.assets_dir.glob("CLI-*.jar"))
         src_dir = assets_mgr.assets_dir / source_name
@@ -117,6 +121,20 @@ class PatchProgressScreen(Screen):
 
         self.patch_in_progress = True
         self.run_patcher_worker(cfg)
+
+    def _show_reused_patch_state(self) -> None:
+        """Reusing an already-patched APK (user picked 'Install' on the
+        classic bash findPatchedApp prompt) — skip straight to the success
+        state instead of re-running the CLI patcher."""
+        self.patch_success = True
+        self.query_one("#log-viewer", RichLog).write(
+            "[bold #00ff7f]Reusing previously patched APK — skipping patch step.[/]"
+        )
+        self.query_one("#progress-bar", ProgressBar).update(progress=100)
+        self.query_one("#status-label", Label).update(
+            "Status: [bold #00ff7f]✓ Using existing patched APK![/]"
+        )
+        self.query_one("#btn-install", Button).disabled = False
 
     @work(thread=True)
     def run_patcher_worker(self, cfg: PatchExecutionConfig) -> None:

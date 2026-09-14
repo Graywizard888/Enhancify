@@ -163,7 +163,7 @@ class AntiSplitManager:
             except Exception:
                 return False
 
-            cmd = ["java", "-jar", str(self.apkeditor_jar), "m", "-i", str(tmp_path), "-o", str(output_apk)]
+            cmd = ["java", "-jar", str(self.apkeditor_jar), "m", "-f", "-i", str(tmp_path), "-o", str(output_apk)]
             code, _, _ = run_command(cmd, timeout=60)
             return code == 0 and output_apk.exists()
 
@@ -185,7 +185,7 @@ class AntiSplitManager:
             except Exception:
                 return False
 
-            cmd = ["java", "-jar", str(self.apkeditor_jar), "m", "-i", str(tmp_path), "-o", str(output_apk)]
+            cmd = ["java", "-jar", str(self.apkeditor_jar), "m", "-f", "-i", str(tmp_path), "-o", str(output_apk)]
             code, _, _ = run_command(cmd, timeout=60)
             return code == 0 and output_apk.exists()
 
@@ -246,7 +246,7 @@ class AntiSplitManager:
                 if lang_id in split_map and (tmp_path / split_map[lang_id]).exists():
                     shutil.copy2(tmp_path / split_map[lang_id], merge_dir / split_map[lang_id])
 
-            cmd = ["java", "-jar", str(self.apkeditor_jar), "m", "-i", str(merge_dir), "-o", str(output_apk)]
+            cmd = ["java", "-jar", str(self.apkeditor_jar), "m", "-f", "-i", str(merge_dir), "-o", str(output_apk)]
             code, _, _ = run_command(cmd, timeout=60)
             return code == 0 and output_apk.exists()
 
