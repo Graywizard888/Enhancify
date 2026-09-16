@@ -219,11 +219,13 @@ class VersionSelectScreen(Screen):
                 )
                 antisplit_mgr.optimize_native_libs(downloaded_file)
 
-            self.app.selected_app["version"] = selected_version.version
-            self.app.selected_app["apk_path"] = (
-                target_apk if target_apk.exists() else downloaded_file
-            )
+            apk_path = target_apk if target_apk.exists() else downloaded_file
 
+            def apply_result():
+                self.app.selected_app["version"] = selected_version.version
+                self.app.selected_app["apk_path"] = apk_path
+
+            self.app.call_from_thread(apply_result)
             self.app.call_from_thread(modal.safe_dismiss)
             self.app.call_from_thread(self.app.push_screen, "patch_select_screen")
         except Exception as e:

@@ -260,12 +260,15 @@ class AppSelectScreen(Screen):
 
     def _continue_after_download(self, rel: AssetReleaseInfo) -> None:
         """Phase 3: parse patches list (API or CLI) with gradient spinner."""
-        parse_modal = ParseProgressModal(self.active_source, from_cli=True)
+        active_source = self.active_source
+        parse_modal = ParseProgressModal(active_source, from_cli=True)
         self.app.push_screen(parse_modal)
-        self.run_parse_worker(parse_modal, rel)
+        self.run_parse_worker(parse_modal, rel, active_source)
 
     @work(thread=True)
-    def run_parse_worker(self, parse_modal: ParseProgressModal, rel: AssetReleaseInfo) -> None:
+    def run_parse_worker(
+        self, parse_modal: ParseProgressModal, rel: AssetReleaseInfo, active_source: str
+    ) -> None:
         cancelled = False
         try:
             # Detect capabilities
@@ -279,7 +282,7 @@ class AppSelectScreen(Screen):
                     parse_modal.set_phase_cli()
 
             patches_json = assets_mgr.load_or_fetch_patches_json(
-                self.active_source,
+                active_source,
                 rel,
                 progress_callback=lambda msg: parse_modal.update_message(msg),
                 parse_progress_callback=parse_modal.on_parse_progress,
@@ -339,7 +342,7 @@ class AppSelectScreen(Screen):
                         )
 
                 parse_modal.update_message("Resolving real app names from APKMirror...")
-                self._resolve_apkmirror_names(apps, rel)
+                self._resolve_apkmirror_names(apps, rel, active_source)
 
                 self.apps_data = sorted(apps, key=lambda x: x["appName"])
         except Exception as e:
@@ -351,7 +354,9 @@ class AppSelectScreen(Screen):
             if not cancelled:
                 self.app.call_from_thread(self.filter_and_display_apps)
 
-    def _resolve_apkmirror_names(self, apps: List[Dict[str, Any]], rel: AssetReleaseInfo) -> None:
+    def _resolve_apkmirror_names(
+        self, apps: List[Dict[str, Any]], rel: AssetReleaseInfo, active_source: str
+    ) -> None:
         """Overlay each app's real APKMirror name + uploads-page category slug
         (looked up via the app_exists API, cached to Apps-<version>.json like
         the classic bash flow) onto the heuristic guess set above. Falls back
@@ -359,7 +364,7 @@ class AppSelectScreen(Screen):
         lookup fails (e.g. offline), so the app list still works without
         network — just with a slug that may not resolve on the version screen.
         """
-        src_dir = assets_mgr.assets_dir / self.active_source
+        src_dir = assets_mgr.assets_dir / active_source
         cache_file = src_dir / f"Apps-{rel.patches_version}.json"
 
         resolved: Dict[str, Dict[str, str]] = {}
