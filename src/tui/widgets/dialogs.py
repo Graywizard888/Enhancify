@@ -963,6 +963,69 @@ class AppearanceDialog(ModalScreen[Optional[str]]):
 
 
 # ---------------------------------------------------------------------------
+# Preset-choice select dialog (patch option "values" presets)
+# ---------------------------------------------------------------------------
+
+class SelectDialog(ModalScreen[Optional[str]]):
+    """
+    Centred dialog listing preset choices for a patch option (e.g. a
+    String option whose metadata provides a fixed "values" map instead of
+    free-form text). One button per choice, scrollable if there are many.
+
+    Result: the chosen preset's underlying value, or None if cancelled.
+    """
+
+    BINDINGS = [
+        Binding("escape", "cancel", "Cancel", show=False),
+    ]
+
+    def __init__(
+        self,
+        title: str,
+        prompt: str,
+        choices: List[Tuple[str, str]],
+        current_value: Optional[str] = None,
+        cancel_label: str = "Cancel",
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.dialog_title = title
+        self.prompt = prompt
+        self.choices = choices  # (label, value)
+        self.current_value = current_value
+        self.cancel_label = cancel_label
+
+    def compose(self) -> ComposeResult:
+        with Vertical(classes="dialog-box small-dialog"):
+            yield Label(self.dialog_title, classes="dialog-title")
+            if self.prompt:
+                yield Label(self.prompt, classes="dialog-message")
+            with VerticalScroll(classes="select-scroll"):
+                with ButtonBar(classes="modules-list"):
+                    for i, (label, value) in enumerate(self.choices):
+                        is_current = value == self.current_value
+                        btn_label = f"✔ {label}" if is_current else label
+                        btn = Button(btn_label, id=f"choice-{i}")
+                        if is_current:
+                            btn.add_class("btn-primary")
+                        yield btn
+            with ButtonBar(classes="dialog-buttons"):
+                yield Button(self.cancel_label, id="btn-cancel", classes="btn-secondary")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        btn_id = event.button.id
+        if btn_id == "btn-cancel":
+            self.dismiss(None)
+            return
+        if btn_id and btn_id.startswith("choice-"):
+            idx = int(btn_id[len("choice-"):])
+            self.dismiss(self.choices[idx][1])
+
+    def action_cancel(self) -> None:
+        self.dismiss(None)
+
+
+# ---------------------------------------------------------------------------
 # Configuration Modules dialog (centred)
 # ---------------------------------------------------------------------------
 

@@ -1105,6 +1105,17 @@ App.theme-cyberpunk-neon .btn-danger {
     background: #131c26;
 }
 
+/* --- Preset-choice select dialog (patch option "values") --- */
+.select-scroll {
+    max-height: 16;
+    min-height: 4;
+    border: round #30363d;
+    background: #0d1117;
+    padding: 1 0;
+    margin-bottom: 1;
+    overflow-y: auto;
+}
+
 /* --- Modules dialog (stacked button list) --- */
 .modules-list {
     layout: vertical;

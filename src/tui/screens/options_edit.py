@@ -15,7 +15,7 @@ from textual.widgets import Button, Footer, Label, ListItem, ListView
 from src.config import config
 from src.environment import env
 from src.patches import patches_mgr
-from src.tui.widgets.dialogs import ConfirmDialog, InputDialog, MessageDialog
+from src.tui.widgets.dialogs import ConfirmDialog, InputDialog, MessageDialog, SelectDialog
 from src.tui.widgets.header import CyberHeader
 from src.tui.widgets.button_bar import ButtonBar
 
@@ -80,6 +80,7 @@ class OptionsEditScreen(Screen):
                     "type": opt.get("type", "String"),
                     "default": opt.get("default"),
                     "value": opt.get("value", opt.get("default")),
+                    "values": opt.get("values") or {},
                 })
 
         self.options_list = filtered
@@ -125,11 +126,28 @@ class OptionsEditScreen(Screen):
         desc = opt["description"]
         cur_val = str(opt["value"] if opt["value"] is not None else "")
 
+        presets = opt.get("values")
+
         if opt_type == "Boolean":
             # Toggle boolean directly or confirm
             new_val = not bool(opt["value"])
             self.options_list[idx]["value"] = new_val
             self.populate_options()
+        elif isinstance(presets, dict) and presets:
+            def handle_select(res: Optional[str]) -> None:
+                if res is not None:
+                    self.options_list[idx]["value"] = res
+                    self.populate_options()
+
+            self.app.push_screen(
+                SelectDialog(
+                    title=f"Edit {title}",
+                    prompt=desc,
+                    choices=list(presets.items()),
+                    current_value=opt["value"],
+                ),
+                handle_select,
+            )
         else:
             def handle_input(res: Optional[str]) -> None:
                 if res is not None:
