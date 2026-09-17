@@ -3,7 +3,7 @@
 terminate() {
     killall -9 java &> /dev/null
     killall -9 dialog &> /dev/null
-    killall -9 WGET &> /dev/null
+    killall -9 wget &> /dev/null
     rm -rf -- *temporary*
     tput cnorm
     clear
