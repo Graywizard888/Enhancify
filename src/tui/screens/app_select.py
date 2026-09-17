@@ -403,19 +403,76 @@ class AppSelectScreen(Screen):
                 )
                 return
 
-            # Store imported app info on app
-            self.app.selected_app = {
-                "pkgName": meta.pkg_name,
-                "appName": meta.app_name,
-                "apkmirrorAppName": meta.app_name.lower(),
-                "imported_file": meta.file_path,
-                "version": meta.version_name,
-                "extension": meta.extension,
-            }
-            # Go directly to patch selection
-            self.app.push_screen("patch_select_screen")
+            if meta.extension in ("apkm", "apks", "xapk"):
+                # Bundle formats must be merged first — feeding a raw bundle
+                # straight to the patcher CLI makes it fall back to its own
+                # internal merge, which pulls in every split (all archs, all
+                # locales, all DPIs) with no device-arch filtering at all.
+                modal = ProgressModal(
+                    "Merging Bundle",
+                    f"Merging {file_path.name} splits with APKEditor...",
+                )
+                self.app.push_screen(modal)
+                self.run_import_merge_worker(modal, meta)
+                return
+
+            if meta.extension == "apk" and config.is_on("OPTIMIZE_LIBS"):
+                modal = ProgressModal(
+                    "Optimizing Libraries",
+                    "Optimizing native libraries for device architecture...",
+                )
+                self.app.push_screen(modal)
+                self.run_import_optimize_worker(modal, meta)
+                return
+
+            self._finish_import(meta, meta.file_path)
 
         self.app.push_screen(FilePickerScreen(), handle_file)
+
+    @work(thread=True)
+    def run_import_merge_worker(self, modal: ProgressModal, meta) -> None:
+        target_apk = meta.file_path.parent / f"{meta.version_name}.apk"
+        try:
+            if meta.extension == "apkm":
+                ok = antisplit_mgr.antisplit_apkm(meta.file_path, target_apk)
+            elif meta.extension == "apks":
+                ok = antisplit_mgr.antisplit_apks(meta.file_path, target_apk)
+            else:
+                ok = antisplit_mgr.antisplit_xapk(meta.file_path, target_apk)
+        except Exception:
+            ok = False
+
+        if not ok:
+            self.app.call_from_thread(modal.safe_dismiss)
+            self.app.call_from_thread(
+                self.app.push_screen,
+                MessageDialog("Merge Error", f"Failed to merge {meta.extension.upper()} splits!"),
+            )
+            return
+
+        final_path = target_apk if target_apk.exists() else meta.file_path
+        if config.is_on("OPTIMIZE_LIBS"):
+            antisplit_mgr.optimize_native_libs(final_path)
+
+        self.app.call_from_thread(modal.safe_dismiss)
+        self.app.call_from_thread(self._finish_import, meta, final_path)
+
+    @work(thread=True)
+    def run_import_optimize_worker(self, modal: ProgressModal, meta) -> None:
+        antisplit_mgr.optimize_native_libs(meta.file_path)
+        self.app.call_from_thread(modal.safe_dismiss)
+        self.app.call_from_thread(self._finish_import, meta, meta.file_path)
+
+    def _finish_import(self, meta, apk_path: Path) -> None:
+        self.app.selected_app = {
+            "pkgName": meta.pkg_name,
+            "appName": meta.app_name,
+            "apkmirrorAppName": meta.app_name.lower(),
+            "imported_file": apk_path,
+            "version": meta.version_name,
+            "extension": meta.extension,
+        }
+        self.app.push_screen("patch_select_screen")
 
     def action_refresh(self) -> None:
         self.load_source_apps()
