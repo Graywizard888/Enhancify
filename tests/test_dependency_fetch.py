@@ -24,6 +24,14 @@ from src.features import (
 )
 
 
+def _run_async(coro):
+    loop = asyncio.new_event_loop()
+    try:
+        return loop.run_until_complete(coro)
+    finally:
+        loop.close()
+
+
 def _fake_release(
     tag: str,
     apk_name: str,
@@ -361,7 +369,7 @@ class TestTuiScreens(unittest.TestCase):
                 app.pop_screen()  # back to main
                 await pilot.pause(0.02)
 
-        asyncio.get_event_loop().run_until_complete(_run())
+        _run_async(_run())
 
     def test_multi_resolution_smoke(self):
         async def _run():
@@ -384,7 +392,7 @@ class TestTuiScreens(unittest.TestCase):
                         app.pop_screen()
                         await pilot.pause(0.02)
 
-        asyncio.get_event_loop().run_until_complete(_run())
+        _run_async(_run())
 
     def test_navigate_main_menu_to_dependency_via_action(self):
         async def _run():
@@ -397,7 +405,7 @@ class TestTuiScreens(unittest.TestCase):
                 await pilot.pause(0.05)
                 self.assertIsInstance(app.screen, DependencySelectScreen)
 
-        asyncio.get_event_loop().run_until_complete(_run())
+        _run_async(_run())
 
 
 class TestEndToEndMockedDownload(unittest.TestCase):
