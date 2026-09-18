@@ -21,6 +21,7 @@ from src.config import config
 from src.environment import env
 from src.installer import app_installer
 from src.patcher import PatchExecutionConfig, patcher_engine
+from src.tui.screens.main_menu import MainMenuScreen
 from src.tui.widgets.dialogs import MessageDialog, ProgressModal
 from src.tui.widgets.header import CyberHeader
 from src.tui.widgets.button_bar import ButtonBar
@@ -120,10 +121,13 @@ class PatchProgressScreen(Screen):
 
     @work(thread=True)
     def run_patcher_worker(self, cfg: PatchExecutionConfig) -> None:
-        log_view = self.query_one("#log-viewer", RichLog)
-
         def log_cb(line: str) -> None:
-            self.app.call_from_thread(log_view.write, line)
+            def write_log():
+                try:
+                    self.query_one("#log-viewer", RichLog).write(line)
+                except Exception:
+                    pass
+            self.app.call_from_thread(write_log)
 
         def prog_cb(pct: float, msg: str) -> None:
             def update_ui():
@@ -236,5 +240,11 @@ class PatchProgressScreen(Screen):
             self.app.push_screen(MessageDialog("Error", "No log file found!"))
 
     def action_main_menu(self) -> None:
-        while len(self.app.screen_stack) > 1:
+        # Pop back to the main menu screen itself, rather than assuming a
+        # fixed stack depth — a stray dialog left on the stack (or the
+        # default screen sitting below main_menu) would otherwise pop too
+        # many or too few screens.
+        while len(self.app.screen_stack) > 1 and not isinstance(
+            self.app.screen, MainMenuScreen
+        ):
             self.app.pop_screen()
