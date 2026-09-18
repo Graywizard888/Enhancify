@@ -131,12 +131,14 @@ class PatchSelectScreen(Screen):
 
         app_info = getattr(self.app, "selected_app", {})
         app_name = app_info.get("appName", "App")
+        source_name = config.get("SOURCE", "Anddea")
 
         yield CyberHeader(mode_label=mode_label, online_status=net_status)
 
         with ScrollableContainer(classes="container-box"):
             with Vertical(classes="card list-card"):
                 yield Label(f"🛠️ Select Patches for [bold #00ff7f]{app_name}[/]", classes="card-title")
+                yield Label(f"📦 Source: {source_name}", id="patch-source-label", classes="card-desc")
                 yield Label("Enabled: 0 / 0", id="patch-count-label", classes="card-desc")
 
                 yield Input(placeholder="🔍 Search patches by name or keyword...", id="search-patches")
@@ -179,6 +181,13 @@ class PatchSelectScreen(Screen):
         # Multiple versions can accumulate on disk across updates; the
         # most recently downloaded one is the current release.
         patches_meta = max(json_files, key=lambda p: p.stat().st_mtime)
+        version_label = patches_meta.stem.removeprefix("Patches-")
+        try:
+            self.query_one("#patch-source-label", Label).update(
+                f"📦 Source: {source_name}  ·  Patches: {version_label}"
+            )
+        except Exception:
+            pass
         import json
         try:
             meta_list = json.loads(patches_meta.read_text(encoding="utf-8"))
