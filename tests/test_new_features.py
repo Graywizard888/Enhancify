@@ -196,17 +196,40 @@ class PatchMetaGuard:
 
     def __init__(self, filename: str = "Patches-testver.json"):
         from src.assets import assets_mgr
+        from src.config import config
 
         self.filename = filename
         self.path = assets_mgr.assets_dir / "Anddea" / filename
         self.path.parent.mkdir(parents=True, exist_ok=True)
+        self._config = config
+        self._prev_source = config.settings.get("SOURCE")
+        # patch_select.py does `glob("Patches-*.json")[0]` with no sort, so any
+        # other Patches-*.json already sitting in this dir (e.g. a real
+        # downloaded metadata file) races with the one we write below. Stash
+        # them aside for the duration of the test and restore in __exit__.
+        self._stashed: list[Path] = []
 
     def __enter__(self):
+        # patch_select.py reads config.get("SOURCE", ...) to pick the assets
+        # subdir it loads from - force it to "Anddea" so this test doesn't
+        # depend on whatever SOURCE happens to be set locally.
+        self._config.settings["SOURCE"] = "Anddea"
+        for other in self.path.parent.glob("Patches-*.json"):
+            if other != self.path:
+                stashed_path = other.with_suffix(other.suffix + ".stashed")
+                other.rename(stashed_path)
+                self._stashed.append(stashed_path)
         self.path.write_text(json.dumps(META_FOR_TESTS), encoding="utf-8")
         return self.path
 
     def __exit__(self, *exc):
         self.path.unlink(missing_ok=True)
+        for stashed_path in self._stashed:
+            stashed_path.rename(stashed_path.with_suffix(""))
+        if self._prev_source is None:
+            self._config.settings.pop("SOURCE", None)
+        else:
+            self._config.settings["SOURCE"] = self._prev_source
         return False
 
 
