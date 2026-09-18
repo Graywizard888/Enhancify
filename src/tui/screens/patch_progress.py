@@ -236,5 +236,5 @@ class PatchProgressScreen(Screen):
             self.app.push_screen(MessageDialog("Error", "No log file found!"))
 
     def action_main_menu(self) -> None:
-        while len(self.app.screen_stack) > 1:
+        while len(self.app.screen_stack) > 2:
             self.app.pop_screen()
