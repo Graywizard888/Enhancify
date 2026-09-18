@@ -107,6 +107,46 @@ class ConfirmDialog(ModalScreen[bool]):
             self.dismiss(False)
 
 
+class ThreeChoiceDialog(ModalScreen[Optional[str]]):
+    """Modal offering three mutually exclusive actions (e.g. Patch / Install /
+    Back — classic bash `findPatchedApp` parity).
+
+    Result: the chosen option's key, or None if dismissed via Escape.
+    """
+
+    BINDINGS = [
+        Binding("escape", "dismiss_none", "Back", show=False),
+    ]
+
+    def __init__(
+        self,
+        title: str,
+        message: str,
+        choices: List[Tuple[str, str, str]],  # (result_key, label, css_class)
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.dialog_title = title
+        self.message = message
+        self.choices = choices
+
+    def compose(self) -> ComposeResult:
+        with Vertical(classes="dialog-box"):
+            yield Label(self.dialog_title, classes="dialog-title")
+            yield Label(self.message, classes="dialog-message")
+            with ButtonBar(classes="dialog-buttons"):
+                for result_key, label, css_class in self.choices:
+                    yield Button(label, id=f"choice-{result_key}", classes=css_class)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        btn_id = event.button.id or ""
+        if btn_id.startswith("choice-"):
+            self.dismiss(btn_id[len("choice-"):])
+
+    def action_dismiss_none(self) -> None:
+        self.dismiss(None)
+
+
 class InputDialog(ModalScreen[Optional[str]]):
     """Modal dialog with a single-line text input field."""
 

@@ -4,6 +4,7 @@ Fetches available APKMirror versions for the chosen app, tags recommended & inst
 and downloads the chosen APK or APKM bundle before proceeding to patch selection.
 """
 
+import shutil
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -18,7 +19,13 @@ from src.antisplit import antisplit_mgr
 from src.apkmirror import ScrapedVersion, apkmirror_scraper
 from src.config import config
 from src.environment import env
-from src.tui.widgets.dialogs import DownloadProgressModal, MessageDialog, ProgressModal
+from src.tui.widgets.dialogs import (
+    ConfirmDialog,
+    DownloadProgressModal,
+    MessageDialog,
+    ProgressModal,
+    ThreeChoiceDialog,
+)
 from src.tui.widgets.header import CyberHeader
 from src.tui.widgets.button_bar import ButtonBar
 
@@ -131,6 +138,99 @@ class VersionSelectScreen(Screen):
             self.download_and_proceed(selected_v)
 
     def download_and_proceed(self, selected_version: ScrapedVersion) -> None:
+        """Entry point for a chosen version.
+
+        Classic bash parity (modules/patch.sh findPatchedApp + modules/app/
+        download.sh downloadApp): before touching the network, check whether
+        this version was already patched or already downloaded/merged, and
+        let the user choose to reuse it instead of redoing the work.
+        """
+        app_info = getattr(self.app, "selected_app", {})
+        app_name = app_info.get("appName", "")
+        source_name = config.get("SOURCE", "Anddea")
+        app_dir = apkmirror_scraper.apps_dir / app_name
+        version = selected_version.version
+
+        patched_path = app_dir / f"{version}-{source_name}.apk"
+        if patched_path.exists():
+            self.app.push_screen(
+                ThreeChoiceDialog(
+                    "| Patched APK Found |",
+                    f"Current directory already contains a patched {app_name} "
+                    f"version {version}.\n\nDo you want to patch it again?",
+                    choices=[
+                        ("patch", "🔨 Patch Again", "btn-primary"),
+                        ("install", "📲 Install", "btn-secondary"),
+                        ("back", "🔙 Back", "btn-secondary"),
+                    ],
+                ),
+                lambda result: self._on_patched_choice(result, selected_version, app_dir, patched_path),
+            )
+            return
+
+        self._check_raw_apk(selected_version, app_dir)
+
+    def _on_patched_choice(
+        self,
+        result: Optional[str],
+        selected_version: ScrapedVersion,
+        app_dir: Path,
+        patched_path: Path,
+    ) -> None:
+        if result == "install":
+            raw_path = app_dir / f"{selected_version.version}.apk"
+            self.app.selected_app["version"] = selected_version.version
+            self.app.selected_app["apk_path"] = raw_path if raw_path.exists() else None
+            self.app.selected_app["skip_patch"] = True
+            self.app.push_screen("patch_progress_screen")
+        elif result == "patch":
+            patched_path.unlink(missing_ok=True)
+            self._check_raw_apk(selected_version, app_dir)
+        # "back" / dismissed (Escape) — stay on the version list, nothing to do
+
+    def _check_raw_apk(self, selected_version: ScrapedVersion, app_dir: Path) -> None:
+        version = selected_version.version
+        raw_path = app_dir / f"{version}.apk"
+
+        if raw_path.exists():
+            app_info = getattr(self.app, "selected_app", {})
+            app_name = app_info.get("appName", "")
+            self.app.push_screen(
+                ConfirmDialog(
+                    "| App Found |",
+                    f"{app_name} {version}.apk already exists.\n\n"
+                    f"Download and merge again?",
+                    yes_label="🔄 Download Again",
+                    no_label="♻ Reuse Existing",
+                ),
+                lambda confirmed: self._on_raw_apk_choice(confirmed, selected_version, app_dir, raw_path),
+            )
+            return
+
+        # Nothing for this version — prune leftovers from a different
+        # version/source so the merge step never sees a stale output path
+        # (classic bash: `rm -rf apps/$APP_NAME` when nothing matches $APP_VER*).
+        if app_dir.exists() and not any(p.name.startswith(version) for p in app_dir.iterdir()):
+            shutil.rmtree(app_dir, ignore_errors=True)
+
+        self._start_download(selected_version)
+
+    def _on_raw_apk_choice(
+        self,
+        download_again: bool,
+        selected_version: ScrapedVersion,
+        app_dir: Path,
+        raw_path: Path,
+    ) -> None:
+        if download_again:
+            shutil.rmtree(app_dir, ignore_errors=True)
+            self._start_download(selected_version)
+        else:
+            self.app.selected_app["version"] = selected_version.version
+            self.app.selected_app["apk_path"] = raw_path
+            self.app.push_screen("patch_select_screen")
+
+    def _start_download(self, selected_version: ScrapedVersion) -> None:
         """Download APK / APKM from APKMirror, process antisplit, and proceed to patch screen."""
         app_info = getattr(self.app, "selected_app", {})
         app_name = app_info.get("appName", "")
