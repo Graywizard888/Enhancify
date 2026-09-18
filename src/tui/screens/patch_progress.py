@@ -90,7 +90,9 @@ class PatchProgressScreen(Screen):
         output_apk = assets_mgr.workspace_dir / "apps" / app_name / f"{app_ver}-{source_name}.apk"
         self.output_apk = output_apk
 
-        # Find CLI and Patches
+        # Find CLI and Patches. Multiple versions can accumulate on disk
+        # across updates; the most recently downloaded one is the current
+        # release, so pick by mtime rather than an arbitrary glob order.
         cli_jars = list(assets_mgr.assets_dir.glob("CLI-*.jar"))
         src_dir = assets_mgr.assets_dir / source_name
         patch_files = list(src_dir.glob("Patches-*.*"))
@@ -102,6 +104,9 @@ class PatchProgressScreen(Screen):
             )
             return
 
+        latest_cli_jar = max(cli_jars, key=lambda p: p.stat().st_mtime)
+        latest_patch_bin = max(patch_bins, key=lambda p: p.stat().st_mtime)
+
         cfg = PatchExecutionConfig(
             source_name=source_name,
             app_name=app_name,
@@ -109,8 +114,8 @@ class PatchProgressScreen(Screen):
             pkg_name=pkg_name,
             input_apk_path=Path(input_apk),
             output_apk_path=output_apk,
-            cli_jar=cli_jars[0],
-            patches_file=patch_bins[0],
+            cli_jar=latest_cli_jar,
+            patches_file=latest_patch_bin,
             enabled_patches=enabled_patches,
             patch_options=options_list,
         )
