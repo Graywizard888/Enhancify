@@ -176,7 +176,9 @@ class PatchSelectScreen(Screen):
             )
             return
 
-        patches_meta = json_files[0]
+        # Multiple versions can accumulate on disk across updates; the
+        # most recently downloaded one is the current release.
+        patches_meta = max(json_files, key=lambda p: p.stat().st_mtime)
         import json
         try:
             meta_list = json.loads(patches_meta.read_text(encoding="utf-8"))
