@@ -197,12 +197,34 @@ class AppInstaller:
     # --- Mode-Specific Installation ---
 
     def run_dex_optimization(self, pkg_name: str, install_type: str = "new") -> bool:
-        """Run dex optimization via Rish."""
+        """Run dex optimization via Rish.
+
+        Some ART versions (e.g. newer Android releases) silently no-op
+        deprecated filters like "quicken" while still returning success.
+        Verify the filter actually applied and fall back to "speed" if not.
+        """
+        # AOT ("speed") compilation of large APKs can take well over 30s via
+        # rish/dex2oat, so compile calls get a generous timeout; dumpsys is a
+        # quick status query and keeps the short one.
         profile_mode = "speed" if install_type == "update" else "quicken"
         force_flag = "-f" if install_type == "update" else ""
         cmd = ["rish", "-c", f"cmd package compile -m {profile_mode} {force_flag} {pkg_name}"]
-        code, out, _ = run_command(cmd, timeout=30)
-        return code == 0
+        code, out, _ = run_command(cmd, timeout=180)
+        if code != 0:
+            return False
+
+        if profile_mode != "speed":
+            _, status_out, status_err = run_command(["rish", "-c", f"dumpsys package {pkg_name}"], timeout=30)
+            # rish writes its real output to stderr (not stdout) when run
+            # without a TTY, as happens under subprocess - check both streams.
+            match = re.search(r"\[status=([^\]]+)\]", status_out + status_err)
+            applied_status = match.group(1) if match else None
+            if applied_status in (None, "verify"):
+                fallback_cmd = ["rish", "-c", f"cmd package compile -m speed -f {pkg_name}"]
+                code, out, _ = run_command(fallback_cmd, timeout=180)
+                return code == 0
+
+        return True
 
     def install_or_export(
         self,
@@ -253,13 +275,18 @@ class AppInstaller:
 
             rish_script = self.system_dir / "rish-install.sh"
             if rish_script.exists():
-                cmd = ["bash", str(rish_script), pkg_name, app_name, exported_name, str(self.storage_dir), "new"]
+                cmd = ["bash", str(rish_script), pkg_name, app_name, exported_name, str(self.storage_dir)]
                 code, out, err = run_command(cmd, timeout=60)
                 if code == 0:
+                    install_type = "new"
+                    install_type_file = self.storage_dir / "install_type.txt"
+                    if install_type_file.exists():
+                        install_type = install_type_file.read_text().strip() or "new"
+
                     # Run DEX Optimization
                     if progress_callback:
                         progress_callback("Running DEX Optimization via Rish...")
-                    self.run_dex_optimization(pkg_name, "new")
+                    self.run_dex_optimization(pkg_name, install_type)
 
                     if config.is_on("LAUNCH_APP_AFTER_MOUNT"):
                         launch_cmd = f"pm resolve-activity --brief {pkg_name} | tail -n 1 | xargs am start -n"
