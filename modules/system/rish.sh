@@ -72,49 +72,52 @@ runDexOptimization() {
     local OPT_OUTPUT
     OPT_OUTPUT=$(rish -c "cmd package compile -m $PROFILE_MODE $FORCE_FLAG $PKG" 2>&1)
     local OPT_EXIT_CODE=$?
-    
+
     log "Optimization output: $OPT_OUTPUT"
     log "Optimization exit code: $OPT_EXIT_CODE"
-    
-    if echo "$OPT_OUTPUT" | grep -q "^Success"; then
-        log "Dex optimization completed successfully for $PKG"
-        
-        if [ "$INSTALL_TYPE" == "update" ]; then
-            log "Executing force-stop for updated app: $PKG"
-            local FORCE_STOP_OUTPUT
-            FORCE_STOP_OUTPUT=$(rish -c "am force-stop $PKG" 2>&1)
-            log "Force-stop output: $FORCE_STOP_OUTPUT"
-            log "Force-stop completed for $PKG after speed optimization"
-        fi
-        
-        applyBackgroundWhitelist "$PKG"
-        
-        notify msg "$APP_DISPLAY_NAME Installed Successfully using Rish with $PROFILE_NAME Optimization"
-        return 0
-    elif echo "$OPT_OUTPUT" | grep -q "Error: Package not found:"; then
+
+    if echo "$OPT_OUTPUT" | grep -q "Error: Package not found:"; then
         log "Dex optimization failed: Package not found"
         notify msg "Optimization Failed\nError: Package not found\nFinishing"
         return 1
-    elif [ $OPT_EXIT_CODE -ne 0 ]; then
+    elif [ $OPT_EXIT_CODE -ne 0 ] && ! echo "$OPT_OUTPUT" | grep -q "^Success"; then
         log "Dex optimization failed with exit code: $OPT_EXIT_CODE"
         notify msg "Optimization Failed\nExit Code: $OPT_EXIT_CODE\nFinishing"
         return 1
-    else
-        log "Dex optimization Done (no explicit status)"
-        
-        if [ "$INSTALL_TYPE" == "update" ]; then
-            log "Executing force-stop for updated app: $PKG"
-            local FORCE_STOP_OUTPUT
-            FORCE_STOP_OUTPUT=$(rish -c "am force-stop $PKG" 2>&1)
-            log "Force-stop output: $FORCE_STOP_OUTPUT"
-            log "Force-stop completed for $PKG after speed optimization"
-        fi
-        
-        applyBackgroundWhitelist "$PKG"
-        
-        notify msg "$APP_DISPLAY_NAME Installed Successfully using Rish with $PROFILE_NAME Optimization"
-        return 0
     fi
+
+    # Some ART versions (e.g. newer Android releases) silently no-op deprecated
+    # filters like "quicken" while still printing "Success". Verify the filter
+    # that was actually applied and fall back to "speed" if it wasn't.
+    if [ "$PROFILE_MODE" != "speed" ]; then
+        local APPLIED_STATUS
+        APPLIED_STATUS=$(rish -c "dumpsys package $PKG" 2>/dev/null | grep -m1 -oP '(?<=\[status=)[^]]+')
+        log "Applied compiler filter after $PROFILE_MODE: ${APPLIED_STATUS:-none}"
+
+        if [ "$APPLIED_STATUS" == "verify" ] || [ -z "$APPLIED_STATUS" ]; then
+            log "Requested filter '$PROFILE_MODE' was not applied by ART (got '${APPLIED_STATUS:-none}'); falling back to 'speed'."
+            OPT_OUTPUT=$(rish -c "cmd package compile -m speed -f $PKG" 2>&1)
+            OPT_EXIT_CODE=$?
+            log "Fallback optimization output: $OPT_OUTPUT"
+            log "Fallback optimization exit code: $OPT_EXIT_CODE"
+            PROFILE_NAME="Speed (Fallback)"
+        fi
+    fi
+
+    log "Dex optimization completed for $PKG"
+
+    if [ "$INSTALL_TYPE" == "update" ]; then
+        log "Executing force-stop for updated app: $PKG"
+        local FORCE_STOP_OUTPUT
+        FORCE_STOP_OUTPUT=$(rish -c "am force-stop $PKG" 2>&1)
+        log "Force-stop output: $FORCE_STOP_OUTPUT"
+        log "Force-stop completed for $PKG after speed optimization"
+    fi
+
+    applyBackgroundWhitelist "$PKG"
+
+    notify msg "$APP_DISPLAY_NAME Installed Successfully using Rish with $PROFILE_NAME Optimization"
+    return 0
 }
 
 installAppRish() {
