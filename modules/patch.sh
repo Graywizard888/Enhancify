@@ -612,7 +612,7 @@ patchApp() {
         --force --exclusive \
         "${PATCHES_ARGS[@]}" \
         --out="$OUTPUT_PATH" \
-        "${SIGNING_ARGS[@]}" \
+        --unsigned \
         "${VERIFICATION_ARGS[@]}" \
         "${LIB_OPTIMIZE_ARGS[@]}" \
         "${BYTECODE_MODE_ARGS[@]}" \
