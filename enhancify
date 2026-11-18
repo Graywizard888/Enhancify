@@ -695,6 +695,7 @@ fetchSrc() {
         done
         rm -rf Enhancify-* &> /dev/null
         cp -f "$SRC/enhancify" "$PREFIX/bin/enhancify"
+        sed -i "1s|.*|#!$PREFIX/bin/bash|" "$PREFIX/bin/enhancify"
         chmod +x "$PREFIX/bin/enhancify"
 
         echo ""

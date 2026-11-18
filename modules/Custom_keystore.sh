@@ -1,6 +1,6 @@
 ManageKeystore() {
     while true; do
-        keystore_dir="/data/data/com.termux/files/home/Enhancify/keystore"
+        keystore_dir="$HOME/Enhancify/keystore"
         has_keystore="false"
         if [ -d "$keystore_dir" ] && [ -n "$(ls -A "$keystore_dir" 2>/dev/null)" ]; then
             has_keystore="true"
@@ -55,7 +55,7 @@ ManageKeystore() {
 }
 
 createKeystore() {
-    keystore_dir="/data/data/com.termux/files/home/Enhancify/keystore"
+    keystore_dir="$HOME/Enhancify/keystore"
     bc_jar=$(find "$HOME/Enhancify/utils" -name "bcprov*.jar" 2>/dev/null | head -1)
 
     if [ -d "$keystore_dir" ] && [ -n "$(ls -A "$keystore_dir" 2>/dev/null)" ]; then
@@ -232,7 +232,7 @@ createKeystore() {
 }
 
 addCustomKeystore() {
-    keystore_dir="/data/data/com.termux/files/home/Enhancify/keystore"
+    keystore_dir="$HOME/Enhancify/keystore"
     bc_jar=$(find "$HOME/Enhancify/utils" -name "bcprov*.jar" 2>/dev/null | head -1)
 
     if [ -d "$keystore_dir" ] && [ -n "$(ls -A "$keystore_dir" 2>/dev/null)" ]; then
