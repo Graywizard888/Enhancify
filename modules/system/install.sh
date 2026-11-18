@@ -46,7 +46,7 @@ installApp() {
             notify info "Preparing To Sign with custom keystore..."
             sleep 1
 
-            local keystore_dir="/data/data/com.termux/files/home/Enhancify/keystore"
+            local keystore_dir="$HOME/Enhancify/keystore"
             local keystore_json="$keystore_dir/keystore.json"
             local utils_dir="$HOME/Enhancify/utils"
             local apksigner_jar
