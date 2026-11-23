@@ -134,7 +134,8 @@ installAppRish() {
     notify info "Please Wait !!\nInstalling $APP_NAME using Rish..."
 
     local PATCHED_APP_INFO
-    if ! PATCHED_APP_INFO=$(./bin/aapt2 dump badging "apps/$APP_NAME/$APP_VER-$SOURCE.apk"); then
+    resolveAapt2 || { notify msg "aapt2 cannot run on this device.\nRun: pkg install aapt2"; return 1; }
+    if ! PATCHED_APP_INFO=$("$AAPT2_BIN" dump badging "apps/$APP_NAME/$APP_VER-$SOURCE.apk"); then
         notify msg "The patched Apk is not valid. Patch again and retry."
         return 1
     fi
