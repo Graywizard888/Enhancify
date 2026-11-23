@@ -634,6 +634,16 @@ installDependencies() {
         ((CTR++))
     done
 
+    # Some environments (e.g. Shellterm) cannot run the bundled non-PIE aapt2; use the packaged PIE build there.
+    if ! "$AAPT2" version &> /dev/null; then
+        print_warning "Bundled aapt2 cannot run here, installing packaged aapt2..."
+        yes | pkg install aapt2 || return 1
+        rm -f "$AAPT2"
+        ln -s "$PREFIX/bin/aapt2" "$AAPT2" || return 1
+        "$AAPT2" version &> /dev/null || return 1
+        print_success "Using $PREFIX/bin/aapt2"
+    fi
+
     CTR=0 && while [ ! -e "$APK_EDITOR" ]; do
         [ $CTR -gt 2 ] && return 1
         echo ""
