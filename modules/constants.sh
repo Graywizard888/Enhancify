@@ -76,19 +76,26 @@ sleep 3
 
 tput civis
 
+# True if the given aapt2 binary can be executed (aapt2 may print its version yet exit non-zero, so check the text too).
+aapt2Runs() {
+    local out
+    out=$("$1" version 2>&1) && return 0
+    [[ "$out" == *"Asset Packaging Tool"* ]]
+}
+
 # Pick a runnable aapt2: the bundled one, else the packaged one (e.g. Shellterm cannot run the bundled non-PIE binary).
 # Result is cached in AAPT2_BIN; the packaged aapt2 is installed on demand and used in place (nothing is replaced).
 resolveAapt2() {
     [ -n "$AAPT2_BIN" ] && return 0
     local bundled="$HOME/Enhancify/bin/aapt2"
-    if "$bundled" version &>/dev/null; then
+    if aapt2Runs "$bundled"; then
         AAPT2_BIN="$bundled"
-    elif "$PREFIX/bin/aapt2" version &>/dev/null; then
+    elif aapt2Runs "$PREFIX/bin/aapt2"; then
         AAPT2_BIN="$PREFIX/bin/aapt2"
     else
         notify info "Bundled aapt2 cannot run here.\nInstalling packaged aapt2..."
         yes | pkg install aapt2 &>/dev/null
-        "$PREFIX/bin/aapt2" version &>/dev/null || return 1
+        aapt2Runs "$PREFIX/bin/aapt2" || return 1
         AAPT2_BIN="$PREFIX/bin/aapt2"
     fi
     return 0
