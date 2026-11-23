@@ -613,13 +613,14 @@ installDependencies() {
     AAPT2="$SRC/bin/aapt2"
     APK_EDITOR="$SRC/bin/APKEditor.jar"
 
+    # A failed download is not fatal: the packaged aapt2 below can take its place.
     CTR=0 && while [ ! -e "$AAPT2" ]; do
-        [ $CTR -gt 2 ] && return 1
+        [ $CTR -gt 2 ] && break
         echo ""
         print_info "Downloading aapt2..."
         echo ""
         readarray -t RESPONSE < <(curl -s "https://api.github.com/repos/Graywizard888/Custom-Enhancify-aapt2-binary/releases/latest" | jq -r --arg ARCH "$(getprop ro.product.cpu.abi)" '.assets[] | if (.name | test($ARCH)) then (.browser_download_url, .size) else empty end' 2> /dev/null)
-        [ "${#RESPONSE[@]}" -eq 0 ] && return 1
+        [ "${#RESPONSE[@]}" -eq 0 ] && break
 
         downloadFile "${RESPONSE[0]}" "$AAPT2"
         chmod +x "$AAPT2"
@@ -635,10 +636,12 @@ installDependencies() {
     done
 
     # Some environments (e.g. Shellterm) cannot run the bundled non-PIE aapt2; use the packaged PIE build there.
-    if ! "$AAPT2" version &> /dev/null && ! "$PREFIX/bin/aapt2" version &> /dev/null; then
+    # aapt2 may print its version yet exit non-zero, so judge by the text as well.
+    aapt2Runs() { local out; out=$("$1" version 2>&1) && return 0; [[ "$out" == *"Asset Packaging Tool"* ]]; }
+    if ! aapt2Runs "$AAPT2" && ! aapt2Runs "$PREFIX/bin/aapt2"; then
         print_warning "Bundled aapt2 cannot run here, installing packaged aapt2..."
         yes | pkg install aapt2 || return 1
-        "$PREFIX/bin/aapt2" version &> /dev/null || return 1
+        aapt2Runs "$PREFIX/bin/aapt2" || return 1
         print_success "Using $PREFIX/bin/aapt2"
     fi
 
