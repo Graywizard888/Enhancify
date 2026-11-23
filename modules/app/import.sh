@@ -72,7 +72,11 @@ extractMeta() {
     if [[ "${FILE_PATH,,}" == *.apk ]]; then
         notify info "Please Wait !!\nExtracting data from \"$(basename "$FILE_PATH")\""
         if ! APP_INFO=$(./bin/aapt2 dump badging "$FILE_PATH" 2>/dev/null); then
-            notify msg "The APK you selected is not valid. Download again and retry."
+            if ! ./bin/aapt2 version &>/dev/null; then
+                notify msg "aapt2 cannot run on this device.\nRun: pkg install aapt2\nthen restart Enhancify."
+            else
+                notify msg "The APK you selected is not valid. Download again and retry."
+            fi
             return 1
         fi
         APP_EXT="apk"
