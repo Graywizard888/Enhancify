@@ -66,8 +66,23 @@ selectFile() {
     return 0
 }
 
+# Bundled aapt2 is non-PIE and cannot run in some environments (e.g. Shellterm): switch to the packaged build.
+ensureAapt2() {
+    ./bin/aapt2 version &>/dev/null && return 0
+    notify info "Bundled aapt2 cannot run here.\nInstalling packaged aapt2..."
+    yes | pkg install aapt2 &>/dev/null
+    [ -x "$PREFIX/bin/aapt2" ] || return 1
+    rm -f ./bin/aapt2
+    ln -s "$PREFIX/bin/aapt2" ./bin/aapt2 || return 1
+    ./bin/aapt2 version &>/dev/null
+}
+
 extractMeta() {
     local APP_INFO
+    ensureAapt2 || {
+        notify msg "aapt2 cannot run on this device.\nRun: pkg install aapt2\nthen restart Enhancify."
+        return 1
+    }
     FILE_PATH="$SELECTED_FILE"
     if [[ "${FILE_PATH,,}" == *.apk ]]; then
         notify info "Please Wait !!\nExtracting data from \"$(basename "$FILE_PATH")\""
