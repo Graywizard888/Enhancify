@@ -454,6 +454,17 @@ downloadFile() {
     return $?
 }
 
+# GitHub API call; uses the saved token (Custom GitHub Token) when there is one to avoid the anonymous rate limit.
+ghApi() {
+    local token
+    token=$(jq -r '.token // empty' "$HOME/Enhancify/github_token.json" 2> /dev/null)
+    if [ -n "$token" ]; then
+        curl -s -H "Authorization: Bearer $token" "$1"
+    else
+        curl -s "$1"
+    fi
+}
+
 installDependencies() {
     local BINS BIN CTR RESPONSE
     local JAVA_VERSION_INSTALLED=""
@@ -619,8 +630,8 @@ installDependencies() {
         echo ""
         print_info "Downloading aapt2..."
         echo ""
-        readarray -t RESPONSE < <(curl -s "https://api.github.com/repos/Graywizard888/Custom-Enhancify-aapt2-binary/releases/latest" | jq -r --arg ARCH "$(getprop ro.product.cpu.abi)" '.assets[] | if (.name | test($ARCH)) then (.browser_download_url, .size) else empty end' 2> /dev/null)
-        [ "${#RESPONSE[@]}" -eq 0 ] && break
+        readarray -t RESPONSE < <(ghApi "https://api.github.com/repos/Graywizard888/Custom-Enhancify-aapt2-binary/releases/latest" | jq -r --arg ARCH "$(getprop ro.product.cpu.abi)" '.assets[] | if (.name | test($ARCH)) then (.browser_download_url, .size) else empty end' 2> /dev/null)
+        [ "${#RESPONSE[@]}" -eq 0 ] && { print_warning "GitHub API gave no aapt2 download (rate limit?)"; break; }
 
         downloadFile "${RESPONSE[0]}" "$AAPT2"
         chmod +x "$AAPT2"
@@ -650,8 +661,12 @@ installDependencies() {
         echo ""
         print_info "Downloading APKEditor..."
         echo ""
-        readarray -t RESPONSE < <(curl -s "https://api.github.com/repos/REAndroid/APKEditor/releases/latest" | jq -r '.assets[0] | .browser_download_url, .size' 2> /dev/null)
-        [ "${#RESPONSE[@]}" -eq 0 ] && return 1
+        readarray -t RESPONSE < <(ghApi "https://api.github.com/repos/REAndroid/APKEditor/releases/latest" | jq -r '.assets[0] | .browser_download_url, .size' 2> /dev/null)
+        if [ "${#RESPONSE[@]}" -eq 0 ] || [ "${RESPONSE[0]}" == "null" ]; then
+            print_error "GitHub API gave no APKEditor download (rate limit?)"
+            print_warning "Wait about an hour, or save a GitHub token (Custom GitHub Token), then run again."
+            return 1
+        fi
 
         downloadFile "${RESPONSE[0]}" "$APK_EDITOR"
 
