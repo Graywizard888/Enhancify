@@ -75,3 +75,21 @@ dialog --no-shadow --infobox "\n$ENHANCIFY_ART\n\nModifier     : Graywizard888\n
 sleep 3
 
 tput civis
+
+# Pick a runnable aapt2: the bundled one, else the packaged one (e.g. Shellterm cannot run the bundled non-PIE binary).
+# Result is cached in AAPT2_BIN; the packaged aapt2 is installed on demand and used in place (nothing is replaced).
+resolveAapt2() {
+    [ -n "$AAPT2_BIN" ] && return 0
+    local bundled="$HOME/Enhancify/bin/aapt2"
+    if "$bundled" version &>/dev/null; then
+        AAPT2_BIN="$bundled"
+    elif "$PREFIX/bin/aapt2" version &>/dev/null; then
+        AAPT2_BIN="$PREFIX/bin/aapt2"
+    else
+        notify info "Bundled aapt2 cannot run here.\nInstalling packaged aapt2..."
+        yes | pkg install aapt2 &>/dev/null
+        "$PREFIX/bin/aapt2" version &>/dev/null || return 1
+        AAPT2_BIN="$PREFIX/bin/aapt2"
+    fi
+    return 0
+}

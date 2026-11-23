@@ -34,7 +34,7 @@ Optimize_Libs() {
     APP_DIR="apps/$APP_NAME/$APP_VER"
     APP_PATH="$APP_DIR.apk"
     TEMP_DIR="$APP_DIR/temp"
-    AAPT2_PATH="$HOME/Enhancify/bin/aapt2"
+    resolveAapt2 && AAPT2_PATH="$AAPT2_BIN"
 
     if [[ ! -f "$AAPT2_PATH" ]]; then
         notify msg "aapt2 not found!\nOperation aborted."

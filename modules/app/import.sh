@@ -66,32 +66,17 @@ selectFile() {
     return 0
 }
 
-# Bundled aapt2 is non-PIE and cannot run in some environments (e.g. Shellterm): switch to the packaged build.
-ensureAapt2() {
-    ./bin/aapt2 version &>/dev/null && return 0
-    notify info "Bundled aapt2 cannot run here.\nInstalling packaged aapt2..."
-    yes | pkg install aapt2 &>/dev/null
-    [ -x "$PREFIX/bin/aapt2" ] || return 1
-    rm -f ./bin/aapt2
-    ln -s "$PREFIX/bin/aapt2" ./bin/aapt2 || return 1
-    ./bin/aapt2 version &>/dev/null
-}
-
 extractMeta() {
     local APP_INFO
-    ensureAapt2 || {
+    resolveAapt2 || {
         notify msg "aapt2 cannot run on this device.\nRun: pkg install aapt2\nthen restart Enhancify."
         return 1
     }
     FILE_PATH="$SELECTED_FILE"
     if [[ "${FILE_PATH,,}" == *.apk ]]; then
         notify info "Please Wait !!\nExtracting data from \"$(basename "$FILE_PATH")\""
-        if ! APP_INFO=$(./bin/aapt2 dump badging "$FILE_PATH" 2>/dev/null); then
-            if ! ./bin/aapt2 version &>/dev/null; then
-                notify msg "aapt2 cannot run on this device.\nRun: pkg install aapt2\nthen restart Enhancify."
-            else
-                notify msg "The APK you selected is not valid. Download again and retry."
-            fi
+        if ! APP_INFO=$("$AAPT2_BIN" dump badging "$FILE_PATH" 2>/dev/null); then
+            notify msg "The APK you selected is not valid. Download again and retry."
             return 1
         fi
         APP_EXT="apk"
@@ -125,7 +110,7 @@ extractMeta() {
                 return 1
             fi
             
-            if ! APP_INFO=$(./bin/aapt2 dump badging "tmp/base.apk" 2>/dev/null); then
+            if ! APP_INFO=$("$AAPT2_BIN" dump badging "tmp/base.apk" 2>/dev/null); then
                 notify msg "Failed to extract metadata from APKS bundle."
                 rm -rf "tmp" &>/dev/null
                 return 1
